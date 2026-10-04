@@ -25,6 +25,9 @@
   },
   "dependencies": {
     "@authzed/authzed-node": "1.6.1",
+    "@ayme-dev/ayme": "file:../../.ayme-lab/packages/ayme",
+    "@ayme-dev/mcp": "file:../../.ayme-lab/packages/mcp",
+    "@ayme-dev/react": "file:../../.ayme-lab/packages/react",
     "@better-auth/core": "1.7.0",
     "@better-auth/oauth-provider": "1.7.0",
     "@better-auth/utils": "0.4.2",
@@ -63,6 +66,7 @@
     "@lexical/selection": "0.41.0",
     "@lexical/table": "0.41.0",
     "@lexical/utils": "0.41.0",
+    "@mcp-b/webmcp-polyfill": "5.1.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@opentelemetry/api": "1.9.0",
     "@opentelemetry/auto-instrumentations-node": "0.75.0",
@@ -169,6 +173,7 @@
     "zod-openapi": "catalog:"
   },
   "devDependencies": {
+    "@ayme-dev/unplugin-ayme": "file:../../.ayme-lab/packages/unplugin-ayme",
     "@formbricks/config-eslint": "workspace:*",
     "@formbricks/config-typescript": "workspace:*",
     "@playwright/test": "catalog:",

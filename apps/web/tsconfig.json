@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
+    // Ayme lab: Ayme's page object decorators (ayme/pom) are legacy TypeScript decorators.
+    "experimentalDecorators": true,
     "jsx": "preserve",
     "jsxImportSource": "react",
     "paths": {

@@ -126,6 +126,10 @@ catalog:
 # The `load-bearing:` notes record the consumer that keeps the vulnerable version in the
 # tree, so the next cleanup can check that single upstream instead of re-deriving it.
 overrides:
+  # Ayme lab: the Ayme packages are unpublished and depend on each other by version, so every
+  # reference resolves to the packages the Ayme lab's prepare step unpacks into .ayme-lab/.
+  "@ayme-dev/ayme": file:.ayme-lab/packages/ayme
+  "@ayme-dev/mcp": file:.ayme-lab/packages/mcp
   # ENG-1324 / GHSA-5375-pq7m-f5r2, ENG-1325 / GHSA-99f4-grh7-6pcq:
   # @grpc/grpc-js is patched in 1.14.4 against malformed-request and malformed-compressed-message crashes.
   # load-bearing: @boxyhq/metrics resolves 1.14.3.
@@ -456,6 +460,9 @@ minimumReleaseAgeExclude:
   # a fresh hub bump isn't blocked. Version-pinned scoped entries (e.g. '@formbricks/hub@0.9.0') are not
   # reliably matched by the exclude, so match by name.
   - "@formbricks/hub"
+  # Ayme lab: @ayme-dev/mcp depends on an MCP SDK release younger than the cooldown. Matched by name,
+  # as above.
+  - "@modelcontextprotocol/sdk"
 
 # ENG-2772 / better-auth#10887: oauth-provider eagerly seeds persisted resources while building its
 # plugin context. A transient database failure rejects Better Auth's process-lifetime context promise,

@@ -99,3 +99,6 @@ authzed/*.perf.jsonl
 docs/api-v3-reference/contract-tests/fixtures.json
 .schemathesis/
 __pycache__/
+
+# Ayme lab: packed Ayme packages, the Decision Endpoint usage log and qualification output
+**/.ayme-lab/

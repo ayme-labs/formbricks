@@ -5,6 +5,7 @@
     "build": {
       "env": [
         "ASSET_PREFIX_URL",
+        "AYME_LAB",
         "BASE_PATH",
         "BETTER_AUTH_URL",
         "E2E_TESTING",
@@ -183,6 +184,11 @@
         "VERSION",
         "WEBHOOK_DELIVERY_TIMEOUT_MS"
       ]
+    },
+    "go": {
+      "cache": false,
+      "passThroughEnv": ["AYME_*"],
+      "persistent": true
     }
   }
 }

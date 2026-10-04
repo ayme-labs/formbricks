@@ -91,7 +91,24 @@ const nextConfig = {
       "../../node_modules/otlp-logger/**/*",
     ],
   },
-  turbopack: {},
+  // Ayme lab: compile Ayme's page objects (ayme/pom) for the browser with Ayme's Turbopack loader,
+  // as Ayme's Next.js example does, restricted to that folder.
+  turbopack: {
+    rules: {
+      "*.ts": {
+        condition: {
+          all: ["browser", { not: "foreign" }, { path: /\/ayme\/pom\// }, { content: /@ayme|extends/ }],
+        },
+        loaders: [
+          {
+            loader: "@ayme-dev/unplugin-ayme/turbopack-loader",
+            options: { tsconfigPath: fileURLToPath(new URL("./ayme/tsconfig.pom.json", import.meta.url)) },
+          },
+        ],
+        as: "*.js",
+      },
+    },
+  },
   experimental: {
     proxyClientMaxBodySize: "16mb",
   },
@@ -191,8 +208,12 @@ const nextConfig = {
         ])
       : [];
     const devLoopbackSourceList = devLoopbackSources.length > 0 ? ` ${devLoopbackSources.join(" ")}` : "";
+    // Ayme lab mode: the page client of Ayme's MCP server looks for the agent's server on loopback
+    // WebSockets, ws://127.0.0.1:9350 to 9365, and pairs with one of them.
+    const isAymeLab = process.env.AYME_LAB === "1";
+    const aymeLabConnectSources = isAymeLab ? " ws://127.0.0.1:*" : "";
 
-    const cspBase = `default-src 'self'; script-src 'self' 'unsafe-inline'${scriptSrcUnsafeEval} https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data:${devLoopbackSourceList} https:; font-src 'self' data: https:; connect-src 'self'${devLoopbackSourceList} https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'`;
+    const cspBase = `default-src 'self'; script-src 'self' 'unsafe-inline'${scriptSrcUnsafeEval} https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' blob: data:${devLoopbackSourceList} https:; font-src 'self' data: https:; connect-src 'self'${devLoopbackSourceList}${aymeLabConnectSources} https: wss:; frame-src 'self' https://app.cal.com https:; media-src 'self' https:; object-src 'self' data: https:; base-uri 'self'; form-action 'self'`;
 
     return [
       {
