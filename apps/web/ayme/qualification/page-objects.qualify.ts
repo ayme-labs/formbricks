@@ -40,7 +40,13 @@ async function expectExactlyOnce(locator: Locator): Promise<void> {
 }
 
 async function expectTools(page: Page, names: string[]): Promise<void> {
-  await expect.poll(() => publishedToolNames(page)).toEqual(expect.arrayContaining(names));
+  // Polls the names still missing, so a failure names them rather than a truncated list.
+  await expect
+    .poll(async () => {
+      const published = await publishedToolNames(page);
+      return names.filter((name) => !published.includes(name));
+    })
+    .toEqual([]);
 }
 
 test("the page pairs with an ayme mcp server by itself, which lists its tools, and the goal tool only with the Goal Loop switch on", async ({
