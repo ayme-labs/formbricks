@@ -130,6 +130,7 @@ overrides:
   # reference resolves to the packages the Ayme lab's prepare step unpacks into .ayme-lab/.
   "@ayme-dev/ayme": file:.ayme-lab/packages/ayme
   "@ayme-dev/mcp": file:.ayme-lab/packages/mcp
+  "@ayme-dev/webmcp": file:.ayme-lab/packages/webmcp
   # ENG-1324 / GHSA-5375-pq7m-f5r2, ENG-1325 / GHSA-99f4-grh7-6pcq:
   # @grpc/grpc-js is patched in 1.14.4 against malformed-request and malformed-compressed-message crashes.
   # load-bearing: @boxyhq/metrics resolves 1.14.3.

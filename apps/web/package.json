@@ -28,6 +28,7 @@
     "@ayme-dev/ayme": "file:../../.ayme-lab/packages/ayme",
     "@ayme-dev/mcp": "file:../../.ayme-lab/packages/mcp",
     "@ayme-dev/react": "file:../../.ayme-lab/packages/react",
+    "@ayme-dev/webmcp": "file:../../.ayme-lab/packages/webmcp",
     "@better-auth/core": "1.7.0",
     "@better-auth/oauth-provider": "1.7.0",
     "@better-auth/utils": "0.4.2",
