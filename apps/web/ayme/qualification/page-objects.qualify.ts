@@ -74,7 +74,8 @@ test("the page pairs with an ayme mcp server by itself, which lists its tools, a
         .poll(() => agent.pageToolNames(), { message: agent.log, timeout: 30_000 })
         .toEqual(expect.arrayContaining(signInTools));
       const listed = await agent.pageToolNames();
-      expect([...listed].sort()).toEqual(await publishedToolNames(page));
+      // WebMCP publishes every listed tool but screenshot, whose image result it cannot carry.
+      expect(listed.filter((name) => name !== "screenshot").sort()).toEqual(await publishedToolNames(page));
       expect(listed.includes("goal")).toBe(goalLoop);
       expect(cspViolations).toEqual([]);
     } finally {
