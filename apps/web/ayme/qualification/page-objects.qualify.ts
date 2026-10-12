@@ -1,6 +1,6 @@
 import { startAgent } from "@ayme-dev/mcp/testing";
 import { type Locator, type Page, expect, test } from "@playwright/test";
-import { GOAL_LOOP_COOKIE } from "../lab-switches";
+import { GOAL_LOOP_COOKIE, PAGE_OBJECTS_COOKIE } from "../lab-switches";
 import { SignInPage } from "../pom/SignInPage";
 import { SurveyEditorPage } from "../pom/SurveyEditorPage";
 import { SurveyNavigationPage } from "../pom/SurveyNavigationPage";
@@ -88,6 +88,26 @@ test("the page pairs with an ayme mcp server by itself, which lists its tools, a
       await context.close();
       await agent.close();
     }
+  }
+});
+
+test("with the page objects switch off, the page publishes snapshot and the Browser Tools and no Page Object Tool", async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext();
+  try {
+    await context.addCookies([
+      { name: PAGE_OBJECTS_COOKIE, value: "off", url: baseURL! },
+      { name: GOAL_LOOP_COOKIE, value: "on", url: baseURL! },
+    ]);
+    const page = await context.newPage();
+    await page.goto("/auth/login");
+    await expectTools(page, [...BROWSER_TOOLS, "snapshot", "goal"]);
+    // Page Object Tools are named <page object>.<action>; Ayme's own tools carry no dot.
+    expect((await publishedToolNames(page)).filter((name) => name.includes("."))).toEqual([]);
+  } finally {
+    await context.close();
   }
 });
 
