@@ -91,8 +91,8 @@ const nextConfig = {
       "../../node_modules/otlp-logger/**/*",
     ],
   },
-  // Ayme lab: compile Ayme's page objects (ayme/pom) for the browser with Ayme's Turbopack loader,
-  // as Ayme's Next.js example does, restricted to that folder.
+  // Ayme lab: page object classes placed in ayme/pom/ are compiled for the browser with Ayme's
+  // Turbopack loader, as Ayme's Next.js example does, restricted to that folder.
   turbopack: {
     rules: {
       "*.ts": {

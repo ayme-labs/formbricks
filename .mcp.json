@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "ayme": {
+      "args": ["--no", "-p", "@ayme-dev/mcp", "ayme", "mcp"],
+      "command": "npx"
+    }
+  }
+}
