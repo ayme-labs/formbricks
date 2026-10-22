@@ -5,11 +5,18 @@ import { AymeProvider } from "@ayme-dev/react";
 import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
 import { type ReactNode, useState } from "react";
 import { DECISION_ENDPOINT_PATH, isGoalLoopOn } from "./lab-switches";
+import { MainNavigation } from "./pom/MainNavigation";
+import { SignInPage } from "./pom/SignInPage";
+import { SurveyListPage } from "./pom/SurveyListPage";
+import { SurveySummaryPage } from "./pom/SurveySummaryPage";
 
 // document.modelContext, before the provider publishes to it. Native WebMCP is kept where present.
 if (typeof window !== "undefined") initializeWebMCPPolyfill();
 
 const webMCP = { enabled: true };
+
+// Registered once: each page is present on its own route, MainNavigation while the sidebar is.
+const pageObjects = [SignInPage, SurveyListPage, SurveySummaryPage, MainNavigation];
 
 /**
  * Ayme in the Formbricks lab app: the runtime owner, the Goal Loop when its cookie is set, and, in
@@ -25,7 +32,7 @@ export function AymeLab({ labMode, children }: Readonly<{ labMode: boolean; chil
 
   // Gated on lab mode the way an app gates it on its dev flag: a page then looks for the agent's server.
   return (
-    <AymeProvider webMCP={webMCP} goalLoop={goalLoop} agentConnection={labMode}>
+    <AymeProvider pageObjects={pageObjects} webMCP={webMCP} goalLoop={goalLoop} agentConnection={labMode}>
       {children}
     </AymeProvider>
   );
