@@ -67,7 +67,7 @@ export class ResponseCardModal extends Dialog {
     super(page, "Survey Response Details");
   }
 
-  @ayme.action({ available: canGoBack })
+  @ayme.action({ available: canGoBack, description: "Shows the response above this one in the table, in this same card." })
   async previous() {
     const before = await this.position.textContent();
     await this.previousButton.click(T);
@@ -75,7 +75,7 @@ export class ResponseCardModal extends Dialog {
     return this;
   }
 
-  @ayme.action({ available: canGoForward })
+  @ayme.action({ available: canGoForward, description: "Shows the response below this one in the table, in this same card." })
   async next() {
     const before = await this.position.textContent();
     await this.nextButton.click(T);
@@ -207,7 +207,7 @@ export class SurveyResponsesPage extends AppPage {
     return this.filter;
   }
 
-  @ayme.action({ available: hasMore })
+  @ayme.action({ available: hasMore, description: "Loads the next batch of responses under the rows already shown." })
   async loadMore() {
     const before = await this.rows.count();
     await this.loadMoreButton.click(T);

@@ -551,7 +551,9 @@ export class SurveyEditorPage extends AppPage {
     throw new Error("The questions did not move.");
   }
 
-  @ayme.action
+  @ayme.action({
+    description: "Changes the survey's name in the editor header. A draft auto-saves it; a published survey keeps it only once saved.",
+  })
   async renameSurvey(name: string) {
     await this.surveyNameInput.fill(name, T);
     return this;

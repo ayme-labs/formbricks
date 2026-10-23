@@ -253,7 +253,7 @@ export class SurveyRow extends AppComponent {
     return this.owner.optionsMenu;
   }
 
-  @ayme.action({ available: draft })
+  @ayme.action({ available: draft, description: "Opens this draft in the editor; other surveys' rows open their summary instead." })
   async openEditor() {
     await this.link.click();
     const editor = new SurveyEditorPage(this.page);
@@ -318,6 +318,7 @@ export class SurveyListPage extends AppPage {
   @ayme.action({
     available: async (self: SurveyListPage) =>
       (await self.loadMoreButton.isVisible()) || "The list already shows every survey its search and filters match",
+    description: "Loads the next batch of surveys under the rows already shown; take fresh row refs from a new snapshot afterwards.",
   })
   async loadMore() {
     const before = await this.rows.count();
