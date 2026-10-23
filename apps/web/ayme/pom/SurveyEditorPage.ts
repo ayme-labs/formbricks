@@ -11,25 +11,26 @@ import { markToasts } from "./Toast";
 const T = { timeout: ROUTE_TIMEOUT };
 
 /** The question types the add-question menu offers, by their menu label. */
-const QUESTION_TYPES = [
-  "Free text",
-  "File Upload",
-  "Date",
-  "Single-Select",
-  "Multi-Select",
-  "Picture Selection",
-  "Ranking",
-  "Matrix",
-  "Rating",
-  "Net Promoter Score (NPS)",
-  "Customer Satisfaction (CSAT)",
-  "Customer Effort (CES)",
-  "Schedule a meeting",
-  "Address",
-  "Contact Info",
-  "Statement (Call to Action)",
-  "Consent",
-];
+// Run 8: was a const array joined into template-literal descriptions, which the compiler drops (#963), so the
+// tools listed `type: string` with no types; a string-literal union becomes an enum in the tool schema.
+type QuestionType =
+  | "Free text"
+  | "File Upload"
+  | "Date"
+  | "Single-Select"
+  | "Multi-Select"
+  | "Picture Selection"
+  | "Ranking"
+  | "Matrix"
+  | "Rating"
+  | "Net Promoter Score (NPS)"
+  | "Customer Satisfaction (CSAT)"
+  | "Customer Effort (CES)"
+  | "Schedule a meeting"
+  | "Address"
+  | "Contact Info"
+  | "Statement (Call to Action)"
+  | "Consent";
 
 /** The question type menu of one block. */
 export class AddQuestionMenu extends Menu {
@@ -41,9 +42,9 @@ export class AddQuestionMenu extends Menu {
   }
 
   @ayme.action({
-    description: `Adds a question of this type at the end of the block and opens it. Types: ${QUESTION_TYPES.join(", ")}.`,
+    description: "Adds a question of this type at the end of the block and opens it.",
   })
-  async addQuestion(type: string) {
+  async addQuestion(type: QuestionType) {
     const before = await this.owner.questionCards.count();
     await this.choose(type);
     await this.owner.questionCards.nth(before).waitFor(T);
@@ -74,9 +75,9 @@ export class QuestionCardMenu extends Menu {
   }
 
   @ayme.action({
-    description: `Changes the question to another type, keeping its headline. Types: ${QUESTION_TYPES.join(", ")}. A question with logic asks first.`,
+    description: "Changes the question to another type, keeping its headline. A question with logic asks first.",
   })
-  async changeType(type: string) {
+  async changeType(type: QuestionType) {
     await this.item("Change question type").click(T);
     const option = this.typeMenu.getByRole("menuitem", { name: type, exact: true });
     await option.waitFor(T);
@@ -89,9 +90,9 @@ export class QuestionCardMenu extends Menu {
   }
 
   @ayme.action({
-    description: `Adds a question of this type right below this one, in the same block. Types: ${QUESTION_TYPES.join(", ")}.`,
+    description: "Adds a question of this type right below this one, in the same block.",
   })
-  async addQuestionBelow(type: string) {
+  async addQuestionBelow(type: QuestionType) {
     const before = await this.owner.questionCards.count();
     await this.chooseInSubmenu("Add question below", type);
     await this.owner.questionCards.nth(before).waitFor(T);
@@ -528,9 +529,9 @@ export class SurveyEditorPage extends AppPage {
   }
 
   @ayme.action({
-    description: `Adds a new block, a page of its own for respondents, whose first question has this type. Types: ${QUESTION_TYPES.join(", ")}.`,
+    description: "Adds a new block, a page of its own for respondents, whose first question has this type.",
   })
-  async addBlock(type: string) {
+  async addBlock(type: QuestionType) {
     const before = await this.blockCards.count();
     if ((await this.addBlockTrigger.getAttribute("aria-expanded")) !== "true") await this.addBlockTrigger.click(T);
     await this.addBlockPicker.getByRole("button", { name: type, exact: true }).click(T);

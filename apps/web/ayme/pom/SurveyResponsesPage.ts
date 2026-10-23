@@ -97,7 +97,8 @@ export class ResponseCardModal extends Dialog {
   }
 }
 
-const COMPLETENESS = ["Complete and partial responses", "Complete responses", "Partial responses"];
+type Completeness = "Complete and partial responses" | "Complete responses" | "Partial responses";
+const COMPLETENESS: string[] = ["Complete and partial responses", "Complete responses", "Partial responses"];
 
 /** The response filter popover: which responses the table and the summary count. */
 @ayme({ root: (self: ResponseFilterPopover) => self.root })
@@ -119,9 +120,9 @@ export class ResponseFilterPopover {
   }
 
   @ayme.action({
-    description: `Chooses which responses match by completeness: one of ${COMPLETENESS.map((c) => `"${c}"`).join(", ")}. Takes effect on apply.`,
+    description: "Chooses which responses match by completeness. Takes effect on apply.",
   })
-  async showOnly(completeness: string) {
+  async showOnly(completeness: Completeness) {
     if (!COMPLETENESS.includes(completeness)) throw new Error(`No completeness option "${completeness}".`);
     await this.completenessSelect.click(T);
     await this.page.getByRole("option", { name: completeness, exact: true }).click(T);
