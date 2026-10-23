@@ -68,7 +68,8 @@ export class TemplateCard extends AppComponent {
 export class TemplateGalleryPage extends AppPage {
   readonly path = "/workspaces/:workspaceId/surveys/templates";
 
-  readonly searchInput = this.page.getByRole("textbox", { name: "Search" });
+  // Exact: the survey list's "Search by survey name" box would match too, and openTemplates returned before the gallery loaded (run 9).
+  readonly searchInput = this.page.getByRole("textbox", { name: "Search", exact: true });
   // Each card shows its name as a level-3 heading; the selected one is a div, the others buttons.
   readonly cards = this.page
     .getByRole("main")
