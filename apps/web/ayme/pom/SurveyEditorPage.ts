@@ -540,6 +540,9 @@ export class SurveyEditorPage extends AppPage {
   // "Add Block" below the last block; it unfolds a picker of question types. The test ids keep these
   // off the copy in the live preview.
   readonly addBlockTrigger = this.page.getByTestId("add-element-trigger");
+  // An ending card's root: its id plus this class set, which no block card has.
+  readonly endingCards = this.page.locator("div[id].group.z-20.flex-row.rounded-lg");
+  readonly addEndingButton = this.page.locator("button", { hasText: /^Add ending$/ });
   readonly addBlockPicker = this.page.getByTestId("add-element-picker");
   readonly activateButton = this.page.getByRole("button", { name: "Activate", exact: true });
   // Publishing an invalid survey shows why in a toast, such as "Choice 1 in question 1 of block 2 is missing".
@@ -594,6 +597,18 @@ export class SurveyEditorPage extends AppPage {
     if ((await this.addBlockTrigger.getAttribute("aria-expanded")) !== "true") await this.addBlockTrigger.click(T);
     await this.addBlockPicker.getByRole("button", { name: type, exact: true }).click(T);
     await this.blockCards.nth(before).waitFor(T);
+    return this;
+  }
+
+  // Run 11: a new agent needed an ending as a jump target and found no tool, so it clicked "Add ending" by hand.
+  @ayme.action({
+    description:
+      "Adds an ending card after the existing ones; its headline starts as \"Thank you!\". A survey without an ending ends on an empty card, and addJumpRule can name an ending by its headline as `target`.",
+  })
+  async addEnding() {
+    const before = await this.endingCards.count();
+    await this.addEndingButton.click(T);
+    await this.endingCards.nth(before).waitFor(T);
     return this;
   }
 

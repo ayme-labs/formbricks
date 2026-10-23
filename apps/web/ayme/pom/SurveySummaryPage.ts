@@ -50,6 +50,14 @@ export class SurveySummaryPage extends AppPage {
 
   readonly editActiveSurvey = new EditActiveSurveyDialog(this.page);
 
+  // Run 11: after publishing, the summary opens with the share dialog ("Your survey is active") over it, and the
+  // controls behind it leave the accessibility tree: openEditor timed out finding "Edit".
+  private async closeShareDialog() {
+    if (!(await this.distributeDialog.isVisible())) return;
+    await this.distributeDialog.getByRole("button", { name: "Close", exact: true }).click({ timeout: ROUTE_TIMEOUT });
+    await this.distributeDialog.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+  }
+
   async elementSummaries(): Promise<ElementSummary[]> {
     const cards = await this.cards.all();
     return cards.map((card) => new ElementSummary(card));
@@ -57,6 +65,7 @@ export class SurveySummaryPage extends AppPage {
 
   @ayme.action
   async openResponses() {
+    await this.closeShareDialog();
     await this.responsesTab.click();
     const responses = new SurveyResponsesPage(this.page);
     return responses.loaded();
@@ -64,6 +73,7 @@ export class SurveySummaryPage extends AppPage {
 
   @ayme.action({ description: "Opens the editor; a survey with responses asks first whether to edit it or a copy." })
   async openEditor() {
+    await this.closeShareDialog();
     return openEditorWith(this.editButton, this.editActiveSurvey);
   }
 
@@ -78,12 +88,12 @@ export class SurveySummaryPage extends AppPage {
     }
     const link = await this.surveyUrlInput.inputValue();
     // Escape does not close this dialog; its Close button does.
-    await this.distributeDialog.getByRole("button", { name: "Close", exact: true }).click({ timeout: ROUTE_TIMEOUT });
-    await this.distributeDialog.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    await this.closeShareDialog();
     return link;
   }
 
   private async setStatus(status: Status) {
+    await this.closeShareDialog();
     await this.statusSelect.click({ timeout: ROUTE_TIMEOUT });
     await this.page.getByRole("option", { name: status, exact: true }).click({ timeout: ROUTE_TIMEOUT });
     await this.statusSelect.filter({ hasText: status }).waitFor({ timeout: SERVER_TIMEOUT });
@@ -118,6 +128,7 @@ export class SurveySummaryPage extends AppPage {
       "Shows the Impressions card's details (the times the survey was viewed) under the stats, or hides them if they show; it hides the drop-off details.",
   })
   async toggleImpressions() {
+    await this.closeShareDialog();
     await this.impressionsToggle.click({ timeout: ROUTE_TIMEOUT });
     return this;
   }
@@ -127,6 +138,7 @@ export class SurveySummaryPage extends AppPage {
       "Shows the Drop-Offs card's details (how many respondents left at each question) under the stats, or hides them if they show; it hides the impression details.",
   })
   async toggleDropOffs() {
+    await this.closeShareDialog();
     await this.dropOffsToggle.click({ timeout: ROUTE_TIMEOUT });
     return this;
   }

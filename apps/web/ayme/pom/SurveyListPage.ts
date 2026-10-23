@@ -331,6 +331,8 @@ export class SurveyListPage extends AppPage {
     description: "Opens the summary of the survey whose name is exactly `name`, loading more of the list until it shows.",
   })
   async openSurveySummary(name: string) {
+    // Run 11: called right after the list's URL loaded, before its rows arrived, this said no such survey.
+    await this.rows.first().waitFor({ timeout: SERVER_TIMEOUT }).catch(() => undefined);
     const matching = this.rows.filter({ has: this.page.getByText(name, { exact: true }) });
     while ((await matching.count()) === 0 && (await this.loadMoreButton.isVisible())) await this.loadMore();
     const count = await matching.count();
