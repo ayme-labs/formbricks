@@ -50,6 +50,61 @@ export class AddQuestionMenu extends Menu {
   }
 }
 
+const LOGIC_WARNING_TITLE = "Changing will cause logic errors";
+
+/** The "…" menu of one question card. Unnamed, so found by its first item. */
+export class QuestionCardMenu extends Menu {
+  // The "Change question type" submenu is a menu of its own, named after its trigger.
+  readonly typeMenu = this.page.getByRole("menu", { name: "Change question type" });
+
+  constructor(
+    page: Page,
+    readonly owner: SurveyEditorPage
+  ) {
+    super(page, undefined, page.getByRole("menu").filter({ has: page.getByRole("menuitem", { name: "Change question type" }) }));
+  }
+
+  @ayme.action({
+    description: `Changes the question to another type, keeping its headline. Types: ${QUESTION_TYPES.join(", ")}. A question with logic asks first.`,
+  })
+  async changeType(type: string) {
+    await this.item("Change question type").click(T);
+    const option = this.typeMenu.getByRole("menuitem", { name: type, exact: true });
+    await option.waitFor(T);
+    // Moving the pointer on to the submenu's item can close the submenu before the click lands.
+    await option.dispatchEvent("click", undefined, T);
+    await this.owner.logicWarning.root.or(this.root).first().waitFor({ state: "attached", ...T });
+    if (await this.owner.logicWarning.root.isVisible()) return this.owner.logicWarning;
+    await this.root.waitFor({ state: "hidden", ...T });
+    return this.owner;
+  }
+}
+
+/** Asked before changing the type of a question that logic depends on. */
+export class LogicWarningDialog extends Dialog {
+  readonly changeAnywayButton = this.root.getByRole("button", { name: "Change anyway" });
+
+  constructor(
+    page: Page,
+    readonly owner: SurveyEditorPage
+  ) {
+    super(page, LOGIC_WARNING_TITLE);
+  }
+
+  @ayme.action({ description: "Changes the type anyway; logic that depends on the question's answers may break." })
+  async changeAnyway() {
+    await this.changeAnywayButton.click(T);
+    await this.root.waitFor({ state: "hidden", ...T });
+    return this.owner;
+  }
+
+  @ayme.action
+  async close() {
+    await this.dismiss();
+    return this.owner;
+  }
+}
+
 const canDelete = async (self: QuestionCard) =>
   (await self.deleteButton.isEnabled()) || "This question cannot be deleted";
 
@@ -76,6 +131,15 @@ export class QuestionCard extends AppComponent {
     return (await this.container.locator(":scope > div").first().getAttribute("data-state")) === "open";
   }
 
+  readonly menuButton = this.toggle.locator("button[aria-haspopup='menu']");
+
+  @ayme.action
+  async openMenu() {
+    await this.menuButton.click(T);
+    await this.owner.questionMenu.root.waitFor(T);
+    return this.owner.questionMenu;
+  }
+
   @ayme.action
   async open() {
     if (!(await this.isOpen())) await this.toggle.click(T);
@@ -100,6 +164,23 @@ export class QuestionCard extends AppComponent {
     const added = this.choiceInputs.nth(before);
     await added.waitFor(T);
     await added.fill(label, T);
+    return this;
+  }
+
+  @ayme.action({ description: "Sets the choices' labels in order, adding choices as needed. Unsaved until the survey is saved." })
+  async setChoices(labels: string[]) {
+    await this.open();
+    if ((await this.choiceInputs.count()) === 0) throw new Error("This question has no choices.");
+    for (const [i, label] of labels.entries()) {
+      if ((await this.choiceInputs.count()) <= i) {
+        await this.addChoiceBelowButtons.nth(i - 1).click(T);
+        await this.choiceInputs.nth(i).waitFor(T);
+      }
+      await this.choiceInputs.nth(i).fill(label, T);
+      // The editor applies each edit to a survey copy it read before; a second edit right after the first
+      // can overwrite it (the first choice came out empty). Let each edit land first.
+      await this.container.page().waitForTimeout(300);
+    }
     return this;
   }
 
@@ -193,7 +274,17 @@ export class SurveyEditorPage extends AppPage {
   readonly blockCards = this.page.locator("div[id].scroll-mt-16").filter({ has: this.page.getByTestId("block-card-header") });
   readonly questionCards = this.page.locator("div[id]:has(> div > [aria-label='Toggle question details'])");
 
+  // "Add Block" below the last block; it unfolds a picker of question types. The test ids keep these
+  // off the copy in the live preview.
+  readonly addBlockTrigger = this.page.getByTestId("add-element-trigger");
+  readonly addBlockPicker = this.page.getByTestId("add-element-picker");
+  readonly activateButton = this.page.getByRole("button", { name: "Activate", exact: true });
+  // Publishing an invalid survey shows why in a toast, such as "Choice 1 in question 1 of block 2 is missing".
+  readonly validationMessage = this.page.getByRole("status").filter({ hasText: /missing|invalid|required/i });
+
   readonly addQuestionMenu = new AddQuestionMenu(this.page, this);
+  readonly questionMenu = new QuestionCardMenu(this.page, this);
+  readonly logicWarning = new LogicWarningDialog(this.page, this);
 
   async questions(): Promise<QuestionCard[]> {
     const cards = await this.questionCards.all();
@@ -209,6 +300,32 @@ export class SurveyEditorPage extends AppPage {
   async renameSurvey(name: string) {
     await this.surveyNameInput.fill(name, T);
     return this;
+  }
+
+  @ayme.action({
+    description: `Adds a new block, a page of its own for respondents, whose first question has this type. Types: ${QUESTION_TYPES.join(", ")}.`,
+  })
+  async addBlock(type: string) {
+    const before = await this.blockCards.count();
+    if ((await this.addBlockTrigger.getAttribute("aria-expanded")) !== "true") await this.addBlockTrigger.click(T);
+    await this.addBlockPicker.getByRole("button", { name: type, exact: true }).click(T);
+    await this.blockCards.nth(before).waitFor(T);
+    return this;
+  }
+
+  // Returns nothing: the summary page imports this module, and modules that import each other break the build (#956).
+  @ayme.action({
+    available: async (self: SurveyEditorPage) => (await self.activateButton.isVisible()) || "The survey is already published",
+    description: "Publishes the draft: respondents can answer it from its link, and the browser goes to its summary.",
+  })
+  async activate() {
+    await this.activateButton.click(T);
+    // Either the browser leaves for the summary, or a validation message (a status toast) keeps the editor.
+    const left = this.page.waitForURL(/\/summary/, T).then(() => undefined);
+    const refused = this.validationMessage.first().waitFor(T).then(() => this);
+    left.catch(() => undefined);
+    refused.catch(() => undefined);
+    return Promise.race([left, refused]);
   }
 
   @ayme.action({ description: "Saves the survey; a published survey's respondents see the changes at once." })

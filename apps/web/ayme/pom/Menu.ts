@@ -11,9 +11,10 @@ export abstract class Menu {
 
   constructor(
     readonly page: Page,
-    name?: string
+    name?: string,
+    root?: Locator
   ) {
-    this.root = name ? page.getByRole("menu", { name }) : page.getByRole("menu");
+    this.root = root ?? (name ? page.getByRole("menu", { name }) : page.getByRole("menu"));
   }
 
   item(name: string) {

@@ -8,16 +8,43 @@ const T = { timeout: ROUTE_TIMEOUT };
 // The thank-you card's "Create your own Survey" button is styled as a submit button too.
 const inProgress = async (self: LinkSurveyPage) =>
   (!(await self.thankYou.isVisible()) && (await self.submitButton.isVisible())) || "The survey shows no question";
-const takesText = async (self: SurveyQuestion) =>
+const canGoBack = async (self: LinkSurveyPage) => {
+  if (await self.backButton.isVisible()) return true;
+  return (await self.questionItems.count()) > 0 ? "This is the first page of the survey" : "The survey shows no question";
+};
+const takesRating = async (self: RespondentQuestion) =>
+  (await self.ratingOptions.first().isVisible()) || "This question is not a rating or NPS scale";
+const takesText = async (self: RespondentQuestion) =>
   (await self.textAnswer.isVisible()) || "This question takes no text";
-const hasOptions = async (self: SurveyQuestion) =>
+const hasOptions = async (self: RespondentQuestion) =>
   (await self.options.first().isVisible()) || "This question has no answer options";
+const hasFields = async (self: RespondentQuestion) =>
+  (await self.textFields.count()) > 1 || "This question has no separate fields";
+const takesDate = async (self: RespondentQuestion) =>
+  (await self.monthSelect.isVisible()) || "This question takes no date";
+const isMatrix = async (self: RespondentQuestion) =>
+  (await self.matrix.isVisible()) || "This question is not a matrix";
+const isRanking = async (self: RespondentQuestion) =>
+  (await self.rankingOptions.isVisible()) || "This question is not a ranking";
+
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const ordinal = (day: number) =>
+  `${day}${day % 10 === 1 && day !== 11 ? "st" : day % 10 === 2 && day !== 12 ? "nd" : day % 10 === 3 && day !== 13 ? "rd" : "th"}`;
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /** One question on the respondent's current page of the survey; its own form, its id the question's id. */
-export class SurveyQuestion extends AppComponent {
+export class RespondentQuestion extends AppComponent {
   readonly headline = this.container.getByRole("heading", { level: 2 });
   readonly textAnswer = this.container.getByRole("textbox").first();
   readonly options = this.container.locator("input[type='radio'], input[type='checkbox'], [role='radio'], [role='checkbox']");
+  readonly ratingOptions = this.container.getByRole("radio", { name: /^Rate \d+ out of/ });
+  // Address and contact info: one textbox per field, named by its label ("City*" when required).
+  readonly textFields = this.container.getByRole("textbox");
+  // The date question is an always-open calendar with month and year dropdowns.
+  readonly monthSelect = this.container.getByRole("combobox", { name: "Choose the Month" });
+  readonly yearSelect = this.container.getByRole("combobox", { name: "Choose the Year" });
+  readonly matrix = this.container.getByRole("table");
+  readonly rankingOptions = this.container.getByRole("group", { name: "Ranking options" });
 
   @ayme.action({ available: takesText })
   async answerText(text: string) {
@@ -36,7 +63,7 @@ export class SurveyQuestion extends AppComponent {
   }
 
   @ayme.action({
-    available: hasOptions,
+    available: takesRating,
     description: "Picks a value on a rating or NPS scale, such as 4 of 5 stars or 9 of 10.",
   })
   async rate(value: number) {
@@ -44,11 +71,53 @@ export class SurveyQuestion extends AppComponent {
     return this;
   }
 
+  @ayme.action({
+    available: hasFields,
+    description: "Fills one field of an address or contact-info question, by its label without the required star, such as City or Email.",
+  })
+  async fillField(label: string, text: string) {
+    await this.container.getByRole("textbox", { name: new RegExp(`^${escapeRegExp(label)}\\*?$`) }).fill(text, T);
+    return this;
+  }
+
+  @ayme.action({ available: takesDate, description: "Picks a date on the calendar, given as YYYY-MM-DD." })
+  async pickDate(date: string) {
+    const [year, month, day] = date.split("-").map(Number);
+    await this.yearSelect.selectOption(String(year), T);
+    await this.monthSelect.selectOption({ index: month - 1 }, T);
+    const name = `${MONTHS[month - 1]} ${ordinal(day)}, ${year}`;
+    await this.container.getByRole("button", { name: new RegExp(`, ${name}$`) }).click(T);
+    return this;
+  }
+
+  @ayme.action({ available: isMatrix, description: "Picks the column for one row of a matrix question, by their labels." })
+  async chooseInRow(row: string, column: string) {
+    // A `has` locator is relative to the label, so it starts from the page, not from this question.
+    const radio = this.container.page().getByRole("radio", { name: `${row} ${column}`, exact: true });
+    await this.container.locator("label").filter({ has: radio }).click(T);
+    return this;
+  }
+
+  @ayme.action({
+    available: isRanking,
+    description: "Ranks the options in this order, first is best; options left out stay unranked.",
+  })
+  async rank(order: string[]) {
+    // Unrank everything first, so the order given is the whole ranking.
+    const remove = this.rankingOptions.getByRole("button", { name: /^Remove .* from ranking$/ });
+    while ((await remove.count()) > 0) await remove.first().click(T);
+    for (const option of order) {
+      await this.rankingOptions.getByRole("button", { name: `Add ${option} to ranking`, exact: true }).click(T);
+      await this.rankingOptions.getByRole("button", { name: `Remove ${option} from ranking`, exact: true }).waitFor(T);
+    }
+    return this;
+  }
+
   private labelFor(option: string) {
     const labels = this.container.locator("label");
     return labels
       .filter({ has: this.container.page().getByLabel(option, { exact: true }) })
-      .or(labels.filter({ hasText: new RegExp(`^\\s*${option.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`) }))
+      .or(labels.filter({ hasText: new RegExp(`^\\s*${escapeRegExp(option)}\\s*$`) }))
       .first();
   }
 }
@@ -71,9 +140,14 @@ export class LinkSurveyPage extends AppPage {
   // A plain span, no alert role; the only hook is its text.
   readonly requiredMessage = this.survey.getByText("Please fill out this field");
 
-  async questions(): Promise<SurveyQuestion[]> {
+  // A CTA question's button can carry the question's id too, so match the question container only.
+  private questionAt(id: string | null) {
+    return this.survey.locator(`form > div[id='${id}']`);
+  }
+
+  async questions(): Promise<RespondentQuestion[]> {
     const items = await this.questionItems.all();
-    return items.map((item) => new SurveyQuestion(item));
+    return items.map((item) => new RespondentQuestion(item));
   }
 
   @ayme.action({
@@ -87,12 +161,20 @@ export class LinkSurveyPage extends AppPage {
     // This page's questions leave (next page or thank-you card), or a required-answer message keeps it.
     const options = { timeout: SERVER_TIMEOUT };
     const waits = [
-      this.survey.locator(`[id='${firstId}']`).waitFor({ state: "detached", ...options }),
+      this.questionAt(firstId).waitFor({ state: "detached", ...options }),
       this.requiredMessage.first().waitFor(options),
     ];
     // The losing wait times out later; only the race's outcome counts.
     for (const wait of waits) wait.catch(() => undefined);
     await Promise.race(waits);
+    return this;
+  }
+
+  @ayme.action({ available: canGoBack, description: "Goes back to the previous page of questions; answers given so far are kept." })
+  async back() {
+    const firstId = await this.questionItems.first().getAttribute("id");
+    await this.backButton.click(T);
+    await this.questionAt(firstId).waitFor({ state: "detached", timeout: SERVER_TIMEOUT });
     return this;
   }
 }

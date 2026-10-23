@@ -10,14 +10,32 @@ import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
 
 export { ROUTE_TIMEOUT };
 
+const T = { timeout: ROUTE_TIMEOUT };
+
 const isDraft = async (row: SurveyRow) => (await row.link.getAttribute("href"))?.endsWith("/edit") ?? false;
 const notDraft = async (self: SurveyRow) =>
   !(await isDraft(self)) || "A draft survey has no summary; it opens in the editor";
 const draft = async (self: SurveyRow) =>
   (await isDraft(self)) || "Only a draft opens in the editor from the list";
 
+type SurveyStatus = "Active" | "Paused" | "Closed";
+const STATUS_VALUE: Record<SurveyStatus, string> = { Active: "inProgress", Paused: "paused", Closed: "completed" };
+
+const hasStatus = async (self: SurveyOptionsMenu) =>
+  (await self.statusSubmenu.isVisible()) || "A draft or archived survey has no status to change";
+const canArchive = async (self: SurveyOptionsMenu) =>
+  (await self.item("Archive").isVisible()) || "The survey is archived";
+// An archived survey's menu offers only Restore and Delete.
+const notArchived = async (self: SurveyOptionsMenu) =>
+  !(await self.item("Restore").isVisible()) || "The survey is archived";
+const canRestore = async (self: SurveyOptionsMenu) =>
+  (await self.item("Restore").isVisible()) || "The survey is not archived";
+
 /** The options menu of one survey row. */
 export class SurveyOptionsMenu extends Menu {
+  // "Change status" opens a submenu of its own; its items carry test ids by status value.
+  readonly statusSubmenu = this.root.getByTestId("survey-status-submenu");
+
   constructor(
     page: Page,
     readonly owner: SurveyListPage
@@ -26,7 +44,10 @@ export class SurveyOptionsMenu extends Menu {
     super(page, "Open options");
   }
 
-  @ayme.action({ description: "Creates a copy of the survey in this workspace, named \"<name> (copy)\", without responses." })
+  @ayme.action({
+    available: notArchived,
+    description: "Creates a copy of the survey in this workspace, named \"<name> (copy)\", without responses.",
+  })
   async duplicate() {
     const before = await this.owner.rows.count();
     await this.choose("Duplicate");
@@ -34,7 +55,35 @@ export class SurveyOptionsMenu extends Menu {
     return this.owner;
   }
 
-  @ayme.action
+  @ayme.action({
+    available: hasStatus,
+    description: "Sets whether the survey collects responses: Active collects, Paused stops until resumed, Closed ends it.",
+  })
+  async changeStatus(status: SurveyStatus) {
+    const option = this.page.getByTestId(`survey-status-option-${STATUS_VALUE[status]}`);
+    // A click opens the submenu as a hover does. Moving the pointer on to the submenu's item closes it again
+    // before the click lands (Radix closes a submenu the pointer leaves), so the item gets the click event alone.
+    if (!(await option.isVisible())) await this.statusSubmenu.click(T);
+    await option.dispatchEvent("click", undefined, T);
+    await this.page.getByText("Survey status updated successfully").first().waitFor({ timeout: SERVER_TIMEOUT });
+    return this.owner;
+  }
+
+  @ayme.action({ available: canArchive })
+  async openArchiveDialog() {
+    await this.choose("Archive");
+    await this.owner.archiveDialog.root.waitFor(T);
+    return this.owner.archiveDialog;
+  }
+
+  @ayme.action({ available: canRestore, description: "Restores an archived survey to the list, as it was before." })
+  async restore() {
+    await this.choose("Restore");
+    await this.page.getByText("Survey restored").first().waitFor({ timeout: SERVER_TIMEOUT });
+    return this.owner;
+  }
+
+  @ayme.action({ available: notArchived })
   async openCopyDialog() {
     await this.choose("Copy to…");
     await this.owner.copyDialog.root.waitFor();
@@ -93,6 +142,62 @@ export class DeleteSurveyDialog extends Dialog {
   async cancel() {
     await this.cancelButton.click();
     await this.root.waitFor({ state: "hidden" });
+    return this.owner;
+  }
+}
+
+/** Confirms archiving a survey. */
+export class ArchiveSurveyDialog extends Dialog {
+  // "Stop and archive" for a survey still collecting responses, "Archive" otherwise.
+  readonly confirmButton = this.root.getByRole("button", { name: /^(Archive|Stop and archive)$/ });
+  readonly cancelButton = this.root.getByRole("button", { name: "Cancel", exact: true });
+
+  constructor(
+    page: Page,
+    readonly owner: SurveyListPage
+  ) {
+    super(page, "Archive this survey?");
+  }
+
+  @ayme.action({
+    description:
+      "Archives the survey: it stops collecting responses and leaves the list; it and its responses are deleted for good after 30 days unless restored.",
+  })
+  async confirm() {
+    await this.confirmButton.click(T);
+    await this.root.waitFor({ state: "hidden", timeout: SERVER_TIMEOUT });
+    return this.owner;
+  }
+
+  @ayme.action
+  async cancel() {
+    await this.cancelButton.click(T);
+    await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    return this.owner;
+  }
+}
+
+type StatusFilter = "Draft" | "Active" | "Paused" | "Closed" | "Archived";
+
+/** The list's Status filter: checkable statuses; the list shows surveys with any checked one. */
+export class StatusFilterMenu extends Menu {
+  constructor(
+    page: Page,
+    readonly owner: SurveyListPage
+  ) {
+    super(page, "Status");
+  }
+
+  @ayme.action({ description: "Checks or unchecks one status in the filter. Archived surveys show only while Archived is checked." })
+  async toggle(status: StatusFilter) {
+    await this.root.getByRole("menuitem").filter({ hasText: new RegExp(`^${status}$`) }).click(T);
+    return this;
+  }
+
+  @ayme.action
+  async close() {
+    await this.page.keyboard.press("Escape");
+    await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
     return this.owner;
   }
 }
@@ -162,6 +267,9 @@ export class SurveyListPage extends AppPage {
   readonly optionsMenu = new SurveyOptionsMenu(this.page, this);
   readonly copyDialog = new CopySurveyDialog(this.page, this);
   readonly deleteDialog = new DeleteSurveyDialog(this.page, this);
+  readonly archiveDialog = new ArchiveSurveyDialog(this.page, this);
+  readonly statusFilterButton = this.page.getByRole("button", { name: /^Status/ });
+  readonly statusFilterMenu = new StatusFilterMenu(this.page, this);
   readonly newSurveyMenu = new NewSurveyMenu(this.page);
 
   async surveys(): Promise<SurveyRow[]> {
@@ -177,6 +285,13 @@ export class SurveyListPage extends AppPage {
   }
 
   @ayme.action
+  async openStatusFilter() {
+    await this.statusFilterButton.click(T);
+    await this.statusFilterMenu.root.waitFor(T);
+    return this.statusFilterMenu;
+  }
+
+  @ayme.action
   async search(name: string) {
     await this.searchInput.fill(name);
     return this;
@@ -185,6 +300,8 @@ export class SurveyListPage extends AppPage {
   @ayme.action({ description: "Opens the summary of the survey whose name is exactly `name`." })
   async openSurveySummary(name: string) {
     const row = new SurveyRow(this.rows.filter({ has: this.page.getByText(name, { exact: true }) }), this.page, this);
+    // The list leaves out archived surveys and those its search and filters hide.
+    if ((await row.container.count()) === 0) throw new Error(`No survey named ${name} is in the list as filtered now.`);
     if (await isDraft(row)) throw new Error(`${name} is a draft survey; a draft has no summary.`);
     return row.openSummary();
   }
