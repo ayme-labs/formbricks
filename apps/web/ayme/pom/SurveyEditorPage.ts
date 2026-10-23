@@ -315,6 +315,9 @@ export class BlockCard extends AppComponent {
   readonly nameInput = this.container.getByRole("textbox", { name: "Block name" });
   readonly addQuestionButton = this.container.getByRole("button", { name: "Add question to block" });
   readonly header = this.container.getByTestId("block-card-header");
+  readonly addLogicButton = this.container.getByRole("button", { name: "Add logic", exact: true });
+  // Each logic rule is a bordered card in the block's "Conditional Logic" section.
+  readonly logicRules = this.container.locator("div.rounded-lg.border.bg-slate-50.p-3:has(> div [role='combobox'])");
 
   constructor(
     container: Locator,
@@ -364,6 +367,33 @@ export class BlockCard extends AppComponent {
     gone.catch(() => undefined);
     asked.catch(() => undefined);
     return Promise.race([gone, asked]);
+  }
+
+  @ayme.action({
+    description:
+      "Adds a logic rule to the block: when `question`'s answer equals the choice `answer`, respondents jump to `target` " +
+      "(a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
+  })
+  async addJumpRule(question: string, answer: string, target: string) {
+    const before = await this.logicRules.count();
+    await this.addLogicButton.click(T);
+    const rule = this.logicRules.nth(before);
+    await rule.waitFor(T);
+    // A rule's comboboxes, in order: question, operator, value, action, action target (the last rule adds the
+    // fallback). They have no accessible names; each opens a "Suggestions" listbox portaled to the document.
+    const combos = rule.getByRole("combobox");
+    const pick = async (combo: Locator, option: string) => {
+      if ((await combo.textContent())?.trim() === option) return;
+      await combo.click(T);
+      await this.owner.page.getByRole("listbox", { name: "Suggestions" }).getByRole("option", { name: option, exact: true }).click(T);
+      await combo.filter({ hasText: option }).waitFor(T);
+    };
+    await pick(combos.nth(0), question);
+    await pick(combos.nth(1), "Equals");
+    await pick(combos.nth(2), answer);
+    await pick(combos.nth(3), "Jump to block");
+    await pick(combos.nth(4), target);
+    return this;
   }
 
   private async moveBy(icon: string) {

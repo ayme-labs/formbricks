@@ -8,6 +8,7 @@ import { SurveyEditorPage } from "./SurveyEditorPage";
 import { SurveySummaryPage } from "./SurveySummaryPage";
 import { TemplateGalleryPage } from "./TemplateGalleryPage";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
+import { markToasts, waitForNewToast } from "./Toast";
 
 export { ROUTE_TIMEOUT };
 
@@ -52,9 +53,11 @@ export class SurveyOptionsMenu extends Menu {
     description: "Creates a copy of the survey in this workspace, named \"<name> (copy)\", without responses.",
   })
   async duplicate() {
+    await markToasts(this.page);
     await this.choose("Duplicate");
     // Not a row count: with 12+ surveys the list refetches back to 12 rendered rows (a 13th shows for ~0.3 s).
-    await this.page.getByText("Survey duplicated successfully").first().waitFor({ timeout: SERVER_TIMEOUT });
+    // A new toast only: back to back, the previous duplicate's toast is still showing (run 7).
+    await waitForNewToast(this.page, "Survey duplicated successfully", SERVER_TIMEOUT);
     return this.owner;
   }
 
@@ -67,8 +70,9 @@ export class SurveyOptionsMenu extends Menu {
     // A click opens the submenu as a hover does. Moving the pointer on to the submenu's item closes it again
     // before the click lands (Radix closes a submenu the pointer leaves), so the item gets the click event alone.
     if (!(await option.isVisible())) await this.statusSubmenu.click(T);
+    await markToasts(this.page);
     await option.dispatchEvent("click", undefined, T);
-    await this.page.getByText("Survey status updated successfully").first().waitFor({ timeout: SERVER_TIMEOUT });
+    await waitForNewToast(this.page, "Survey status updated successfully", SERVER_TIMEOUT);
     return this.owner;
   }
 
@@ -81,8 +85,9 @@ export class SurveyOptionsMenu extends Menu {
 
   @ayme.action({ available: canRestore, description: "Restores an archived survey to the list, as it was before." })
   async restore() {
+    await markToasts(this.page);
     await this.choose("Restore");
-    await this.page.getByText("Survey restored").first().waitFor({ timeout: SERVER_TIMEOUT });
+    await waitForNewToast(this.page, "Survey restored", SERVER_TIMEOUT);
     return this.owner;
   }
 
