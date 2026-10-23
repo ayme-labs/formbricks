@@ -586,7 +586,8 @@ export class SurveyEditorPage extends AppPage {
   }
 
   @ayme.action({
-    description: "Adds a new block, a page of its own for respondents, whose first question has this type.",
+    description:
+      "Adds a new block, a page of its own for respondents, whose first question has this type. The new question's headline is empty until set with questions.setHeadline.",
   })
   async addBlock(type: QuestionType) {
     const before = await this.blockCards.count();

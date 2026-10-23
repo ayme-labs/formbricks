@@ -200,7 +200,8 @@ export class SurveyResponsesPage extends AppPage {
     return rows.map((row) => new ResponseRow(row, this));
   }
 
-  @ayme.action
+  // Run 10: a new agent read the generated "Then shows ResponseFilterPopover" and called that class name (#971).
+  @ayme.action({ description: "Opens the response filter, whose tools are SurveyResponsesPage.filter.*." })
   async openFilter() {
     if (!(await this.filter.root.isVisible())) await this.filterButton.click(T);
     await this.filter.root.waitFor(T);
