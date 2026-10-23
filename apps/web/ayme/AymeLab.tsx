@@ -1,13 +1,15 @@
 "use client";
 
 import { decisionEndpoint } from "@ayme-dev/ayme";
-import { AymeProvider } from "@ayme-dev/react";
+import { AymeProvider, usePageObject } from "@ayme-dev/react";
 import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
 import { type ReactNode, useState } from "react";
 import { DECISION_ENDPOINT_PATH, isGoalLoopOn } from "./lab-switches";
 import { MainNavigation } from "./pom/MainNavigation";
 import { SignInPage } from "./pom/SignInPage";
+import { SurveyEditorPage } from "./pom/SurveyEditorPage";
 import { SurveyListPage } from "./pom/SurveyListPage";
+import { SurveyResponsesPage } from "./pom/SurveyResponsesPage";
 import { SurveySummaryPage } from "./pom/SurveySummaryPage";
 
 // document.modelContext, before the provider publishes to it. Native WebMCP is kept where present.
@@ -15,8 +17,20 @@ if (typeof window !== "undefined") initializeWebMCPPolyfill();
 
 const webMCP = { enabled: true };
 
-// Registered once: each page is present on its own route, MainNavigation while the sidebar is.
-const pageObjects = [SignInPage, SurveyListPage, SurveySummaryPage, MainNavigation];
+// Registered once: each page is present on its own route.
+const pageObjects = [
+  SignInPage,
+  SurveyListPage,
+  SurveySummaryPage,
+  SurveyResponsesPage,
+  SurveyEditorPage,
+];
+
+// The sidebar is on many routes and no URL states it, so it is registered while this component is mounted.
+function SidebarPageObject() {
+  usePageObject(MainNavigation);
+  return null;
+}
 
 /**
  * Ayme in the Formbricks lab app: the runtime owner, the Goal Loop when its cookie is set, and, in
@@ -33,6 +47,7 @@ export function AymeLab({ labMode, children }: Readonly<{ labMode: boolean; chil
   // Gated on lab mode the way an app gates it on its dev flag: a page then looks for the agent's server.
   return (
     <AymeProvider pageObjects={pageObjects} webMCP={webMCP} goalLoop={goalLoop} agentConnection={labMode}>
+      <SidebarPageObject />
       {children}
     </AymeProvider>
   );

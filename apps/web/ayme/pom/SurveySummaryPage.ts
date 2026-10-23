@@ -1,6 +1,8 @@
 import { ayme } from "@ayme-dev/ayme";
 import { AppComponent } from "./AppComponent";
 import { AppPage } from "./AppPage";
+import { EditActiveSurveyDialog, openEditorWith } from "./SurveyEditorPage";
+import { SurveyResponsesPage } from "./SurveyResponsesPage";
 
 /** One question's results card on the summary. */
 export class ElementSummary extends AppComponent {
@@ -13,12 +15,14 @@ export class SurveySummaryPage extends AppPage {
 
   readonly summaryTab = this.page.getByRole("link", { name: "Summary" });
   readonly responsesTab = this.page.getByRole("link", { name: "Responses" });
-  readonly editButton = this.page.getByRole("button", { name: "Edit" });
+  readonly editButton = this.page.getByRole("button", { name: "Edit", exact: true });
   readonly statusSelect = this.page.getByRole("combobox");
   readonly impressionsToggle = this.page.getByTestId("impressions-toggle");
   readonly dropOffsToggle = this.page.getByTestId("dropOffs-toggle");
   // One card per question; the card markup differs by question type, so match the list's children.
   readonly cards = this.page.locator("div.mt-10.space-y-8 > div:has(h3)");
+
+  readonly editActiveSurvey = new EditActiveSurveyDialog(this.page);
 
   async elementSummaries(): Promise<ElementSummary[]> {
     const cards = await this.cards.all();
@@ -28,11 +32,13 @@ export class SurveySummaryPage extends AppPage {
   @ayme.action
   async openResponses() {
     await this.responsesTab.click();
+    const responses = new SurveyResponsesPage(this.page);
+    return responses.loaded();
   }
 
-  @ayme.action
+  @ayme.action({ description: "Opens the editor; a survey with responses asks first whether to edit it or a copy." })
   async openEditor() {
-    await this.editButton.click();
+    return openEditorWith(this.editButton, this.editActiveSurvey);
   }
 
   @ayme.action
