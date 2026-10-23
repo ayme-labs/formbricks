@@ -55,8 +55,14 @@ type LogicOperator =
   | "<"
   | ">="
   | "<="
+  | "Equals one of"
   | "Is submitted"
-  | "Is skipped";
+  | "Is skipped"
+  | "Is accepted"
+  | "Is clicked";
+
+// Operators that compare with nothing: the value box goes away once one is picked.
+const NO_VALUE: string[] = ["Is submitted", "Is skipped", "Is accepted", "Is clicked"];
 
 /** The question type menu of one block. */
 export class AddQuestionMenu extends Menu {
@@ -290,6 +296,17 @@ export class QuestionCard extends AppComponent {
       // can overwrite it (the first choice came out empty). Let each edit land first.
       await this.container.page().waitForTimeout(300);
     }
+    // Run 10: 300 ms was not always enough ("Yes" came out empty again); refill what got overwritten.
+    for (let round = 0; round < 3; round++) {
+      const lost = [];
+      for (const [i, label] of labels.entries())
+        if ((await this.choiceInputs.nth(i).inputValue()) !== label) lost.push(i);
+      if (lost.length === 0) return this;
+      for (const i of lost) {
+        await this.choiceInputs.nth(i).fill(labels[i], T);
+        await this.container.page().waitForTimeout(500);
+      }
+    }
     return this;
   }
 
@@ -403,7 +420,7 @@ export class BlockCard extends AppComponent {
   @ayme.action({
     // One string literal: a description built with `+` was dropped from the tool without a word (run 7).
     description:
-      "Adds a logic rule to the block: when `question`'s answer compares by `operator` to `answer` (a choice label, a scale value such as 4, or the text typed for a free-text question; ignored for Is submitted / Is skipped), respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Choice and text questions offer the worded operators, rating, NPS and number questions the symbols (=, >, <=…). Unsaved until the survey is saved.",
+      "Adds a logic rule to the block: when `question`'s answer compares by `operator` to `answer` (a choice label, a scale value such as 4, or the text typed for a free-text question; ignored for Is submitted / Is skipped / Is accepted / Is clicked), respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Each question type offers its own operators: single-select Equals, Does not equal, Equals one of; text the worded ones; rating, NPS and number the symbols (=, >, <=…); consent Is accepted; a call to action Is clicked. An operator the question does not offer fails with the list it does offer. Unsaved until the survey is saved.",
   })
   async addJumpRule(question: string, operator: LogicOperator, answer: string, target: string) {
     // A collapsed "Conditional Logic" section renders no rules, so count them with it open (run 7: the new
@@ -422,13 +439,22 @@ export class BlockCard extends AppComponent {
     const pick = async (c: Locator, option: string) => {
       if ((await c.textContent())?.trim() === option) return;
       await c.click(T);
-      await this.owner.page.getByRole("listbox", { name: "Suggestions" }).getByRole("option", { name: option, exact: true }).click(T);
+      const list = this.owner.page.getByRole("listbox", { name: "Suggestions" });
+      await list.waitFor(T);
+      const wanted = list.getByRole("option", { name: option, exact: true });
+      // Run 10: a symbol operator on a choice question waited 30 s for an option the list never has.
+      if ((await wanted.count()) === 0) {
+        const offered = (await list.getByRole("option").allTextContents()).map((s) => s.trim());
+        await this.owner.page.keyboard.press("Escape");
+        throw new Error(`"${option}" is not among the offered options (${offered.join(", ")}); the new rule stays incomplete.`);
+      }
+      await wanted.click(T);
       await c.filter({ hasText: option }).waitFor(T);
     };
     await pick(combo("-conditionValue"), question);
     await pick(combo("-conditionOperator"), operator);
     const typed = rule.getByRole("textbox", { name: "Select or type value" });
-    if (operator === "Is submitted" || operator === "Is skipped") {
+    if (NO_VALUE.includes(operator)) {
       // These take no value: the value box is gone.
     } else if (await typed.isVisible()) await typed.fill(answer, T);
     else await pick(combo("-conditionMatchValue"), answer);
