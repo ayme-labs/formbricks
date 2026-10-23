@@ -134,14 +134,14 @@ export class ResponseFilterPopover {
   async apply() {
     await this.applyButton.click(T);
     await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
-    return this.owner;
+    return this.owner.loaded();
   }
 
   @ayme.action({ description: "Removes every filter and applies that at once." })
   async clearAll() {
     await this.clearAllButton.click(T);
     await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
-    return this.owner;
+    return this.owner.loaded();
   }
 }
 
@@ -183,7 +183,13 @@ export class SurveyResponsesPage extends AppPage {
   readonly loadMoreButton = this.page.locator("button", { hasText: "Load more" });
   // Body rows only; an empty table renders one row without a "Select row" checkbox.
   readonly noResults = this.page.locator("table tbody").getByText("No results");
-  readonly rows = this.page.locator("table tbody tr").filter({ has: this.page.locator("button[role=checkbox], input[type=checkbox]") });
+  // While the first page loads (also after a filter is applied), the table shows 10 placeholder rows of grey
+  // pulsing bars; they are not responses, and refs taken from them go stale once the data arrives.
+  readonly placeholders = this.page.locator("table tbody tr .animate-pulse");
+  readonly rows = this.page
+    .locator("table tbody tr")
+    .filter({ has: this.page.locator("button[role=checkbox], input[type=checkbox]") })
+    .filter({ hasNot: this.page.locator(".animate-pulse") });
 
   readonly responseCard = new ResponseCardModal(this.page, this);
   readonly filter = new ResponseFilterPopover(this.page, this);
@@ -191,6 +197,9 @@ export class SurveyResponsesPage extends AppPage {
 
   /** Resolves once the table shows its first page of responses, or that none match. */
   async loaded() {
+    // A refetch may start a moment after the click that caused it: give the placeholders a chance to appear.
+    await this.placeholders.first().waitFor({ timeout: 1_000 }).catch(() => undefined);
+    await this.placeholders.first().waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
     await this.rows.first().or(this.noResults).waitFor({ timeout: ROUTE_TIMEOUT });
     return this;
   }

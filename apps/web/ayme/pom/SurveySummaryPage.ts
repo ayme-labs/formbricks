@@ -41,6 +41,10 @@ export class SurveySummaryPage extends AppPage {
   readonly statusSelect = this.page.locator("button[role='combobox']");
   readonly impressionsToggle = this.page.getByTestId("impressions-toggle");
   readonly dropOffsToggle = this.page.getByTestId("dropOffs-toggle");
+  // "Distribute" opens the share dialog on its "Anonymous links" tab, whose read-only input holds the public link.
+  readonly distributeButton = this.page.getByRole("button", { name: "Distribute", exact: true });
+  readonly distributeDialog = this.page.getByRole("dialog").filter({ has: this.page.getByTestId("survey-url-input") });
+  readonly surveyUrlInput = this.page.getByTestId("survey-url-input");
   // One card per question; the card markup differs by question type, so match the list's children.
   readonly cards = this.page.locator("div.mt-10.space-y-8 > div:has(h3)");
 
@@ -61,6 +65,22 @@ export class SurveySummaryPage extends AppPage {
   @ayme.action({ description: "Opens the editor; a survey with responses asks first whether to edit it or a copy." })
   async openEditor() {
     return openEditorWith(this.editButton, this.editActiveSurvey);
+  }
+
+  @ayme.action({
+    description:
+      "Answers the survey's public link (the anonymous multi-use link respondents open, as Distribute shows it), for example http://localhost:3000/s/<surveyId>. Opens the Distribute dialog to read it and closes it again.",
+  })
+  async publicLink(): Promise<string> {
+    if (!(await this.surveyUrlInput.isVisible())) {
+      await this.distributeButton.click({ timeout: ROUTE_TIMEOUT });
+      await this.surveyUrlInput.waitFor({ timeout: ROUTE_TIMEOUT });
+    }
+    const link = await this.surveyUrlInput.inputValue();
+    // Escape does not close this dialog; its Close button does.
+    await this.distributeDialog.getByRole("button", { name: "Close", exact: true }).click({ timeout: ROUTE_TIMEOUT });
+    await this.distributeDialog.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    return link;
   }
 
   private async setStatus(status: Status) {
