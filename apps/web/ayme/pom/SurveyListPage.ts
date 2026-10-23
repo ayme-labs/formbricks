@@ -13,7 +13,9 @@ export { ROUTE_TIMEOUT };
 
 const T = { timeout: ROUTE_TIMEOUT };
 
-const isDraft = async (row: SurveyRow) => (await row.link.getAttribute("href"))?.endsWith("/edit") ?? false;
+// A draft's row links to its editor. Read without waiting: behind an open menu the row is aria-hidden, and a
+// role locator that waits there costs the action timeout per row on every observation (ayme-labs/ayme#962).
+const isDraft = async (row: SurveyRow) => (await row.container.locator("a[href$='/edit']").count()) > 0;
 const notDraft = async (self: SurveyRow) =>
   !(await isDraft(self)) || "A draft survey has no summary; it opens in the editor";
 const draft = async (self: SurveyRow) =>
@@ -50,9 +52,9 @@ export class SurveyOptionsMenu extends Menu {
     description: "Creates a copy of the survey in this workspace, named \"<name> (copy)\", without responses.",
   })
   async duplicate() {
-    const before = await this.owner.rows.count();
     await this.choose("Duplicate");
-    await this.owner.rows.nth(before).waitFor({ timeout: SERVER_TIMEOUT });
+    // Not a row count: with 12+ surveys the list refetches back to 12 rendered rows (a 13th shows for ~0.3 s).
+    await this.page.getByText("Survey duplicated successfully").first().waitFor({ timeout: SERVER_TIMEOUT });
     return this.owner;
   }
 

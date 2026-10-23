@@ -28,12 +28,11 @@ const notSelected = async (self: TemplateCard) =>
   !(await self.useButton.isVisible()) || "The template is already selected";
 
 async function createFrom(useButton: Locator, page: Page) {
-  const url = page.url();
   await useButton.click(T);
-  // The new survey opens in the editor once it is created on the server.
-  await page.waitForURL((u) => u.href !== url && u.pathname.endsWith("/edit"), T);
+  // The new survey opens in the editor once it is created on the server. Waiting for the editor's name field,
+  // not page.waitForURL: on the 52-card gallery that timed out at 30 s although the editor had opened (run 6).
   const editor = new SurveyEditorPage(page);
-  await editor.surveyNameInput.waitFor(T);
+  await editor.surveyNameInput.waitFor({ timeout: 2 * ROUTE_TIMEOUT });
   return editor;
 }
 

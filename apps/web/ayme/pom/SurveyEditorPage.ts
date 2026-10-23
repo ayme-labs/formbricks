@@ -166,8 +166,10 @@ export class LogicWarningDialog extends Dialog {
   }
 }
 
+// Counted, not isEnabled(): isEnabled waits for the button, and behind a menu or dialog (aria-hidden) that wait
+// costs the action timeout on every observation and shows a raw TimeoutError as the reason (ayme-labs/ayme#962).
 const canDelete = async (self: QuestionCard) =>
-  (await self.deleteButton.isEnabled()) || "This question cannot be deleted";
+  (await self.toggle.locator("button:not(:disabled):has(svg.lucide-trash)").count()) > 0 || "This question cannot be deleted";
 
 /** One question in the editor; a closed card shows only its headline. */
 export class QuestionCard extends AppComponent {
@@ -274,10 +276,45 @@ export class QuestionCard extends AppComponent {
   }
 }
 
+// The block header's icon buttons have no accessible name (tooltips only); their icons tell them apart.
+// Read without waiting: predicates run on every observation, also behind menus (ayme-labs/ayme#962).
+const blockButtonEnabled = (icon: string, reason: string) => async (self: BlockCard) =>
+  (await self.header.locator(`button:not(:disabled):has(> svg.lucide-${icon})`).count()) > 0 || reason;
+const blockCanMoveUp = blockButtonEnabled("arrow-up", "This is the survey's first block");
+const blockCanMoveDown = blockButtonEnabled("arrow-down", "This is the survey's last block");
+const blockCanDelete = blockButtonEnabled("trash", "This is the survey's only block");
+
+/** Asked before deleting a block whose questions other questions' logic refers to. */
+export class LogicDeletionDialog extends Dialog {
+  readonly deleteAnywayButton = this.root.getByRole("button", { name: "Delete anyways" });
+
+  constructor(
+    page: Page,
+    readonly owner: SurveyEditorPage
+  ) {
+    super(page, "Logic Inconsistency");
+  }
+
+  @ayme.action({ description: "Deletes the block anyway; logic rules that refer to its questions break." })
+  async deleteAnyway() {
+    const before = await this.owner.blockCards.count();
+    await this.deleteAnywayButton.click(T);
+    await this.owner.blockCards.nth(before - 1).waitFor({ state: "detached", ...T });
+    return this.owner;
+  }
+
+  @ayme.action
+  async close() {
+    await this.dismiss();
+    return this.owner;
+  }
+}
+
 /** One block: a page of the survey holding one or more questions. */
 export class BlockCard extends AppComponent {
   readonly nameInput = this.container.getByRole("textbox", { name: "Block name" });
   readonly addQuestionButton = this.container.getByRole("button", { name: "Add question to block" });
+  readonly header = this.container.getByTestId("block-card-header");
 
   constructor(
     container: Locator,
@@ -286,11 +323,54 @@ export class BlockCard extends AppComponent {
     super(container);
   }
 
+  headerButton(icon: string) {
+    return this.header.locator(`button:has(> svg.lucide-${icon})`);
+  }
+
   @ayme.action
   async openAddQuestionMenu() {
     await this.addQuestionButton.click(T);
     await this.owner.addQuestionMenu.root.waitFor(T);
     return this.owner.addQuestionMenu;
+  }
+
+  @ayme.action({ available: blockCanMoveUp, description: "Moves the block, a page for respondents, one place earlier. Unsaved until the survey is saved." })
+  async moveUp() {
+    return this.moveBy("arrow-up");
+  }
+
+  @ayme.action({ available: blockCanMoveDown, description: "Moves the block one place later. Unsaved until the survey is saved." })
+  async moveDown() {
+    return this.moveBy("arrow-down");
+  }
+
+  @ayme.action({ description: "Adds a copy of the block, its questions and settings, right after it. Unsaved until the survey is saved." })
+  async duplicate() {
+    const before = await this.owner.blockCards.count();
+    await this.headerButton("copy").click(T);
+    await this.owner.blockCards.nth(before).waitFor(T);
+    return this.owner;
+  }
+
+  @ayme.action({
+    available: blockCanDelete,
+    description: "Removes the block and its questions. Asks first when other questions' logic refers to them. Unsaved until the survey is saved.",
+  })
+  async delete() {
+    const before = await this.owner.blockCards.count();
+    await this.headerButton("trash").click(T);
+    const gone = this.owner.blockCards.nth(before - 1).waitFor({ state: "detached", ...T }).then(() => this.owner);
+    const asked = this.owner.logicDeletion.root.waitFor(T).then(() => this.owner.logicDeletion);
+    gone.catch(() => undefined);
+    asked.catch(() => undefined);
+    return Promise.race([gone, asked]);
+  }
+
+  private async moveBy(icon: string) {
+    const layout = await this.owner.layout();
+    await this.headerButton(icon).click(T);
+    await this.owner.layoutChangedFrom(layout);
+    return this.owner;
   }
 }
 
@@ -370,6 +450,7 @@ export class SurveyEditorPage extends AppPage {
   readonly addQuestionMenu = new AddQuestionMenu(this.page, this);
   readonly questionMenu = new QuestionCardMenu(this.page, this);
   readonly logicWarning = new LogicWarningDialog(this.page, this);
+  readonly logicDeletion = new LogicDeletionDialog(this.page, this);
 
   async questions(): Promise<QuestionCard[]> {
     const cards = await this.questionCards.all();
