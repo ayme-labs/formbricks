@@ -600,13 +600,21 @@ export class SurveyEditorPage extends AppPage {
   // Returns nothing: the summary page imports this module, and modules that import each other break the build (#956).
   @ayme.action({
     available: canActivate,
-    description: "Publishes the draft: respondents can answer it from its link, and the browser goes to its summary.",
+    description:
+      "Publishes the draft: respondents can answer it from its link, and the browser goes to its summary. When Formbricks refuses the survey as it is, the call fails with its message and the editor stays.",
   })
   async activate() {
     await this.activateButton.click(T);
     // Either the browser leaves for the summary, or a validation message (a status toast) keeps the editor.
     const left = this.page.waitForURL(/\/summary/, T).then(() => undefined);
-    const refused = this.validationMessage.first().waitFor(T).then(() => this);
+    // Run 10: answering OK on a refusal let a new agent read "published" until it looked at the changes.
+    const refused = this.validationMessage
+      .first()
+      .waitFor(T)
+      .then(async () => {
+        const message = (await this.validationMessage.first().textContent())?.trim();
+        throw new Error(`Formbricks did not publish the survey: "${message}". The editor stays open.`);
+      });
     left.catch(() => undefined);
     refused.catch(() => undefined);
     return Promise.race([left, refused]);
