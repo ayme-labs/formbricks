@@ -5,10 +5,10 @@ import { AppPage } from "./AppPage";
 import { Dialog } from "./Dialog";
 import { Menu } from "./Menu";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
-import { markToasts } from "./Toast";
+import { markToasts, waitForAnyNewToast } from "./Toast";
 
 // A 12-question survey keeps the editor's main thread busy past the 1 s default action timeout.
-const T = { timeout: ROUTE_TIMEOUT };
+const T = { timeout: ROUTE_TIMEOUT }; // #957: the 1 s default action timeout
 
 /** The question types the add-question menu offers, by their menu label. */
 // Run 8: was a const array joined into template-literal descriptions, which the compiler drops (#963), so the
@@ -107,7 +107,7 @@ export class QuestionCardMenu extends Menu {
     await this.item("Change question type").click(T);
     const option = this.typeMenu.getByRole("menuitem", { name: type, exact: true });
     await option.waitFor(T);
-    // Moving the pointer on to the submenu's item can close the submenu before the click lands.
+    // Moving the pointer on to the submenu's item can close the submenu before the click lands (ayme-labs/ayme#959).
     await option.dispatchEvent("click", undefined, T);
     await this.owner.logicWarning.root.or(this.root).first().waitFor({ state: "attached", ...T });
     if (await this.owner.logicWarning.root.isVisible()) return this.owner.logicWarning;
@@ -163,7 +163,7 @@ export class QuestionCardMenu extends Menu {
     await this.item(trigger).click(T);
     const option = this.page.getByRole("menu", { name: trigger }).getByRole("menuitem", { name: item, exact: true });
     await option.waitFor(T);
-    // As in changeType: the submenu can close before a pointer click lands.
+    // As in changeType: the submenu can close before a pointer click lands (#959).
     await option.dispatchEvent("click", undefined, T);
     await this.root.waitFor({ state: "hidden", ...T });
   }
@@ -231,8 +231,9 @@ export class QuestionCard extends AppComponent {
     return this.owner.questionMenu;
   }
 
-  @ayme.action
-  async open() {
+  // Run 9: was `open`, which read like navigation; it only unfolds the card in place.
+  @ayme.action({ description: "Unfolds this question's card in the editor to show its fields; an unfolded card stays as it is." })
+  async expand() {
     if (!(await this.isOpen())) await this.toggle.click(T);
     await this.headlineEditor.waitFor(T);
     return this;
@@ -245,7 +246,7 @@ export class QuestionCard extends AppComponent {
     description: "Sets whether respondents must answer this question before going on. Unsaved until the survey is saved.",
   })
   async setRequired(required: boolean) {
-    await this.open();
+    await this.expand();
     if (!(await this.requiredSwitch.isVisible())) throw new Error("This question has no Required setting.");
     // A call-to-action question shows the switch disabled: it is never required.
     if (!(await this.requiredSwitch.isEnabled())) throw new Error("This question's Required setting cannot be changed.");
@@ -257,7 +258,7 @@ export class QuestionCard extends AppComponent {
 
   @ayme.action({ description: "Replaces the question's headline. Unsaved until the survey is saved (or auto-saved)." })
   async setHeadline(text: string) {
-    await this.open();
+    await this.expand();
     await this.headlineEditor.fill(text, T);
     await this.headline.filter({ hasText: text }).waitFor(T);
     return this;
@@ -265,7 +266,7 @@ export class QuestionCard extends AppComponent {
 
   @ayme.action({ description: "Adds a choice with this label after the last one. Unsaved until the survey is saved." })
   async addChoice(label: string) {
-    await this.open();
+    await this.expand();
     const before = await this.choiceInputs.count();
     if (before === 0) throw new Error("This question has no choices.");
     await this.addChoiceBelowButtons.nth(before - 1).click(T);
@@ -277,7 +278,7 @@ export class QuestionCard extends AppComponent {
 
   @ayme.action({ description: "Sets the choices' labels in order, adding choices as needed. Unsaved until the survey is saved." })
   async setChoices(labels: string[]) {
-    await this.open();
+    await this.expand();
     if ((await this.choiceInputs.count()) === 0) throw new Error("This question has no choices.");
     for (const [i, label] of labels.entries()) {
       if ((await this.choiceInputs.count()) <= i) {
@@ -591,7 +592,7 @@ export class SurveyEditorPage extends AppPage {
     // exists."; waiting only for "Changes saved." answered a 10 s timeout. Any new toast ends the wait.
     await markToasts(this.page);
     await this.saveButton.click(T);
-    await this.page.locator("[role='status']:not([data-ayme-seen])").filter({ hasText: /\S/ }).first().waitFor({ timeout: SERVER_TIMEOUT });
+    await waitForAnyNewToast(this.page, SERVER_TIMEOUT);
     return this;
   }
 }

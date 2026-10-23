@@ -25,7 +25,6 @@ export class AccountMenu extends Menu {
 /** The workspace sidebar, on every page inside a workspace. */
 export class MainNavigation extends AppComponent {
   readonly surveysLink = this.container.getByRole("link", { name: "Surveys" });
-  readonly contactsLink = this.container.getByRole("link", { name: "Contacts" });
   readonly settingsLink = this.container.getByRole("link", { name: "Settings" });
   // Set in the constructor: field initializers run before the `page` parameter property is assigned.
   readonly accountButton: Locator;
@@ -33,7 +32,7 @@ export class MainNavigation extends AppComponent {
 
   constructor(readonly page: Page) {
     // The editor's preview pane is an <aside> too; only the sidebar links to the survey list.
-    // CSS rather than a role: a modal's aria-hidden would make a role root vanish.
+    // CSS rather than a role: a modal's aria-hidden would make a role root vanish (ayme-labs/ayme#729).
     super(page.locator("aside:has(a[href$='/surveys'])"));
     this.accountButton = page.locator("#userDropdownTrigger");
     this.accountMenu = new AccountMenu(page);
@@ -61,10 +60,5 @@ export class MainNavigation extends AppComponent {
     await this.accountButton.press("Enter", { timeout: ROUTE_TIMEOUT });
     await this.accountMenu.root.waitFor({ timeout: ROUTE_TIMEOUT });
     return this.accountMenu;
-  }
-
-  @ayme.action
-  async openContacts() {
-    await this.contactsLink.click();
   }
 }

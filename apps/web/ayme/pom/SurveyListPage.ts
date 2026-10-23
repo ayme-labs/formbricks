@@ -12,7 +12,7 @@ import { markToasts, waitForNewToast } from "./Toast";
 
 export { ROUTE_TIMEOUT };
 
-const T = { timeout: ROUTE_TIMEOUT };
+const T = { timeout: ROUTE_TIMEOUT }; // #957: the 1 s default action timeout
 
 // A draft's row links to its editor. Read without waiting: behind an open menu the row is aria-hidden, and a
 // role locator that waits there costs the action timeout per row on every observation (ayme-labs/ayme#962).
@@ -68,7 +68,7 @@ export class SurveyOptionsMenu extends Menu {
   async changeStatus(status: SurveyStatus) {
     const option = this.page.getByTestId(`survey-status-option-${STATUS_VALUE[status]}`);
     // A click opens the submenu as a hover does. Moving the pointer on to the submenu's item closes it again
-    // before the click lands (Radix closes a submenu the pointer leaves), so the item gets the click event alone.
+    // before the click lands (Radix closes a submenu the pointer leaves), so the item gets the click event alone (#959).
     if (!(await option.isVisible())) await this.statusSubmenu.click(T);
     await markToasts(this.page);
     await option.dispatchEvent("click", undefined, T);
@@ -309,9 +309,9 @@ export class SurveyListPage extends AppPage {
     return this.statusFilterMenu;
   }
 
-  @ayme.action
-  async search(name: string) {
-    await this.searchInput.fill(name);
+  @ayme.action({ description: "Shows only the surveys whose name contains `text`; an empty text shows them all again." })
+  async search(text: string) {
+    await this.searchInput.fill(text, T);
     return this;
   }
 

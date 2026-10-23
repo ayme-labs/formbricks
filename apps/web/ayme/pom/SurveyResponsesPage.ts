@@ -8,7 +8,7 @@ import { ROUTE_TIMEOUT } from "./Timing";
 
 // A survey with many questions renders a wide table that keeps the main thread busy past the 1 s
 // default action timeout, so every wait on this page uses a longer one.
-const T = { timeout: ROUTE_TIMEOUT };
+const T = { timeout: ROUTE_TIMEOUT }; // #957: the 1 s default action timeout
 
 const canGoBack = async (self: ResponseCardModal) =>
   (await self.previousButton.isEnabled()) || "This is the first response in the list";
@@ -169,6 +169,8 @@ const hasMore = async (self: SurveyResponsesPage) =>
   (await self.loadMoreButton.isVisible()) || "Every response is loaded";
 
 /** The responses of one survey, as a table; filters here also apply to the summary. */
+// No openSummary here: SurveySummaryPage imports this module, and modules that import each other crash the
+// Page Object loader (ayme-labs/ayme#956).
 export class SurveyResponsesPage extends AppPage {
   readonly path = "/workspaces/:workspaceId/surveys/:surveyId/responses";
 

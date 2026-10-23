@@ -3,7 +3,7 @@ import { AppComponent } from "./AppComponent";
 import { AppPage } from "./AppPage";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
 
-const T = { timeout: ROUTE_TIMEOUT };
+const T = { timeout: ROUTE_TIMEOUT }; // #957: the 1 s default action timeout
 
 // The thank-you card's "Create your own Survey" button is styled as a submit button too.
 const inProgress = async (self: LinkSurveyPage) =>

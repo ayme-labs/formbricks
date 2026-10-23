@@ -91,15 +91,23 @@ export class SurveySummaryPage extends AppPage {
     return this.setStatus("Active");
   }
 
-  @ayme.action
+  // The stat cards work like tabs: one click shows that card's details under the stats, another hides them,
+  // and showing one hides the other's.
+  @ayme.action({
+    description:
+      "Shows the Impressions card's details (the times the survey was viewed) under the stats, or hides them if they show; it hides the drop-off details.",
+  })
   async toggleImpressions() {
-    await this.impressionsToggle.click();
+    await this.impressionsToggle.click({ timeout: ROUTE_TIMEOUT });
     return this;
   }
 
-  @ayme.action
+  @ayme.action({
+    description:
+      "Shows the Drop-Offs card's details (how many respondents left at each question) under the stats, or hides them if they show; it hides the impression details.",
+  })
   async toggleDropOffs() {
-    await this.dropOffsToggle.click();
+    await this.dropOffsToggle.click({ timeout: ROUTE_TIMEOUT });
     return this;
   }
 }

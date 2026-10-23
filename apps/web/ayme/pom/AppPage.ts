@@ -2,7 +2,7 @@ import { ayme } from "@ayme-dev/ayme";
 import type { Page } from "@playwright/test";
 
 // Formbricks renders its error card at the requested route when the user may not see the resource (no team
-// access) or it does not exist; the URL alone would keep every tool of the page listed there (run 7).
+// access) or it does not exist; the URL alone would keep every tool of the page listed there (run 7, ayme-labs/ayme#964).
 const ERROR_CARD = "Error loading resources";
 
 const onPage = async (self: AppPage) =>

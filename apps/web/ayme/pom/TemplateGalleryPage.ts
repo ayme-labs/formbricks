@@ -5,7 +5,7 @@ import { AppPage } from "./AppPage";
 import { SurveyEditorPage } from "./SurveyEditorPage";
 import { ROUTE_TIMEOUT } from "./Timing";
 
-const T = { timeout: ROUTE_TIMEOUT };
+const T = { timeout: ROUTE_TIMEOUT }; // #957: the 1 s default action timeout
 
 /** The gallery's filter buttons, one row each for channel, industry and role. */
 type TemplateFilter =
@@ -81,7 +81,7 @@ export class TemplateGalleryPage extends AppPage {
     return cards.map((card) => new TemplateCard(card, this.page));
   }
 
-  @ayme.action
+  @ayme.action({ description: "Shows only the templates matching `text`; an empty text shows them all again." })
   async search(text: string) {
     await this.searchInput.fill(text, T);
     return this;
