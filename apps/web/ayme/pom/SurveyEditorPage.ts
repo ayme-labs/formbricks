@@ -52,6 +52,14 @@ export class AddQuestionMenu extends Menu {
 
 const LOGIC_WARNING_TITLE = "Changing will cause logic errors";
 
+const canMoveUp = async (self: QuestionCardMenu) =>
+  (await self.item("Move up").isEnabled()) || "This is the survey's first question";
+const canMoveDown = async (self: QuestionCardMenu) =>
+  (await self.item("Move down").isEnabled()) || "This is the survey's last question";
+// The submenu is there only when the survey has more than one block.
+const hasOtherBlocks = async (self: QuestionCardMenu) =>
+  (await self.item("Move question to block").isVisible()) || "The survey has only one block";
+
 /** The "…" menu of one question card. Unnamed, so found by its first item. */
 export class QuestionCardMenu extends Menu {
   // The "Change question type" submenu is a menu of its own, named after its trigger.
@@ -77,6 +85,59 @@ export class QuestionCardMenu extends Menu {
     if (await this.owner.logicWarning.root.isVisible()) return this.owner.logicWarning;
     await this.root.waitFor({ state: "hidden", ...T });
     return this.owner;
+  }
+
+  @ayme.action({
+    description: `Adds a question of this type right below this one, in the same block. Types: ${QUESTION_TYPES.join(", ")}.`,
+  })
+  async addQuestionBelow(type: string) {
+    const before = await this.owner.questionCards.count();
+    await this.chooseInSubmenu("Add question below", type);
+    await this.owner.questionCards.nth(before).waitFor(T);
+    return this.owner;
+  }
+
+  @ayme.action({
+    available: hasOtherBlocks,
+    description: "Moves this question to the end of another block, given by its name as the menu shows it, such as \"Block 3\".",
+  })
+  async moveToBlock(block: string) {
+    const layout = await this.owner.layout();
+    await this.chooseInSubmenu("Move question to block", block);
+    await this.owner.layoutChangedFrom(layout);
+    return this.owner;
+  }
+
+  @ayme.action({
+    available: canMoveUp,
+    description: "Moves the question up within its block; from the top of its block it moves the whole block up a page.",
+  })
+  async moveUp() {
+    return this.move("Move up");
+  }
+
+  @ayme.action({
+    available: canMoveDown,
+    description: "Moves the question down within its block; from the bottom of its block it moves the whole block down a page.",
+  })
+  async moveDown() {
+    return this.move("Move down");
+  }
+
+  private async move(item: string) {
+    const layout = await this.owner.layout();
+    await this.choose(item);
+    await this.owner.layoutChangedFrom(layout);
+    return this.owner;
+  }
+
+  private async chooseInSubmenu(trigger: string, item: string) {
+    await this.item(trigger).click(T);
+    const option = this.page.getByRole("menu", { name: trigger }).getByRole("menuitem", { name: item, exact: true });
+    await option.waitFor(T);
+    // As in changeType: the submenu can close before a pointer click lands.
+    await option.dispatchEvent("click", undefined, T);
+    await this.root.waitFor({ state: "hidden", ...T });
   }
 }
 
@@ -144,6 +205,23 @@ export class QuestionCard extends AppComponent {
   async open() {
     if (!(await this.isOpen())) await this.toggle.click(T);
     await this.headlineEditor.waitFor(T);
+    return this;
+  }
+
+  // In the open card.
+  readonly requiredSwitch = this.container.getByRole("switch", { name: "Required", exact: true });
+
+  @ayme.action({
+    description: "Sets whether respondents must answer this question before going on. Unsaved until the survey is saved.",
+  })
+  async setRequired(required: boolean) {
+    await this.open();
+    if (!(await this.requiredSwitch.isVisible())) throw new Error("This question has no Required setting.");
+    // A call-to-action question shows the switch disabled: it is never required.
+    if (!(await this.requiredSwitch.isEnabled())) throw new Error("This question's Required setting cannot be changed.");
+    if ((await this.requiredSwitch.isChecked()) !== required) await this.requiredSwitch.click(T);
+    await this.container.page().waitForTimeout(300);
+    if ((await this.requiredSwitch.isChecked()) !== required) throw new Error("The Required setting did not change.");
     return this;
   }
 
@@ -261,6 +339,13 @@ export async function openEditorWith(editButton: Locator, dialog: EditActiveSurv
   return editor;
 }
 
+// While the editor loads neither button shows; a published survey shows "Save" and no Activate.
+const canActivate = async (self: SurveyEditorPage) => {
+  if (await self.activateButton.isVisible()) return true;
+  if (await self.page.getByRole("button", { name: "Save", exact: true }).isVisible()) return "The survey is already published";
+  return "The editor shows no Activate button";
+};
+
 /** The survey editor: questions, blocks and endings of one survey. */
 export class SurveyEditorPage extends AppPage {
   readonly path = "/workspaces/:workspaceId/surveys/:surveyId/edit";
@@ -296,6 +381,23 @@ export class SurveyEditorPage extends AppPage {
     return blocks.map((block) => new BlockCard(block, this));
   }
 
+  /** Which question ids each block holds, in order: changes when a question moves. */
+  async layout() {
+    const blocks = await this.blockCards.all();
+    const ids = await Promise.all(
+      blocks.map(async (block) => (await block.locator("div[id]:has(> div > [aria-label='Toggle question details'])").evaluateAll((els) => els.map((el) => el.id))).join(","))
+    );
+    return ids.join("|");
+  }
+
+  async layoutChangedFrom(before: string) {
+    for (let waited = 0; waited < ROUTE_TIMEOUT; waited += 200) {
+      if ((await this.layout()) !== before) return;
+      await this.page.waitForTimeout(200);
+    }
+    throw new Error("The questions did not move.");
+  }
+
   @ayme.action
   async renameSurvey(name: string) {
     await this.surveyNameInput.fill(name, T);
@@ -315,7 +417,7 @@ export class SurveyEditorPage extends AppPage {
 
   // Returns nothing: the summary page imports this module, and modules that import each other break the build (#956).
   @ayme.action({
-    available: async (self: SurveyEditorPage) => (await self.activateButton.isVisible()) || "The survey is already published",
+    available: canActivate,
     description: "Publishes the draft: respondents can answer it from its link, and the browser goes to its summary.",
   })
   async activate() {

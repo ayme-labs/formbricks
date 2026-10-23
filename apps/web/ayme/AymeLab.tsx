@@ -12,6 +12,7 @@ import { SurveyEditorPage } from "./pom/SurveyEditorPage";
 import { SurveyListPage } from "./pom/SurveyListPage";
 import { SurveyResponsesPage } from "./pom/SurveyResponsesPage";
 import { SurveySummaryPage } from "./pom/SurveySummaryPage";
+import { TemplateGalleryPage } from "./pom/TemplateGalleryPage";
 
 // document.modelContext, before the provider publishes to it. Native WebMCP is kept where present.
 if (typeof window !== "undefined") initializeWebMCPPolyfill();
@@ -26,6 +27,7 @@ const pageObjects = [
   SurveyResponsesPage,
   SurveyEditorPage,
   LinkSurveyPage,
+  TemplateGalleryPage,
 ];
 
 // The sidebar is on many routes and no URL states it, so it is registered while this component is mounted.

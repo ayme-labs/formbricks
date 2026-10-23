@@ -167,7 +167,13 @@ export class LinkSurveyPage extends AppPage {
     // The losing wait times out later; only the race's outcome counts.
     for (const wait of waits) wait.catch(() => undefined);
     await Promise.race(waits);
+    // The page swaps its whole question area: once the old page left, wait for the new one to render.
+    if (!(await this.requiredMessage.first().isVisible())) await this.pageShown();
     return this;
+  }
+
+  private async pageShown() {
+    await this.questionItems.first().or(this.thankYou).waitFor({ timeout: SERVER_TIMEOUT });
   }
 
   @ayme.action({ available: canGoBack, description: "Goes back to the previous page of questions; answers given so far are kept." })
@@ -175,6 +181,7 @@ export class LinkSurveyPage extends AppPage {
     const firstId = await this.questionItems.first().getAttribute("id");
     await this.backButton.click(T);
     await this.questionAt(firstId).waitFor({ state: "detached", timeout: SERVER_TIMEOUT });
+    await this.pageShown();
     return this;
   }
 }

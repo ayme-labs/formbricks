@@ -6,6 +6,7 @@ import { Dialog } from "./Dialog";
 import { Menu } from "./Menu";
 import { SurveyEditorPage } from "./SurveyEditorPage";
 import { SurveySummaryPage } from "./SurveySummaryPage";
+import { TemplateGalleryPage } from "./TemplateGalleryPage";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
 
 export { ROUTE_TIMEOUT };
@@ -215,6 +216,14 @@ export class NewSurveyMenu extends Menu {
     await editor.surveyNameInput.waitFor({ timeout: ROUTE_TIMEOUT });
     return editor;
   }
+
+  @ayme.action
+  async openTemplates() {
+    await this.item("Choose a template").click(T);
+    const gallery = new TemplateGalleryPage(this.page);
+    await gallery.searchInput.waitFor(T);
+    return gallery;
+  }
 }
 
 /** One survey in the list. */
@@ -263,6 +272,8 @@ export class SurveyListPage extends AppPage {
   readonly searchInput = this.page.getByRole("textbox", { name: "Search by survey name" });
   // Each survey row: the block that holds the row link and its options menu trigger.
   readonly rows = this.page.locator("div.relative.block:has([data-testid='survey-dropdown-trigger'])");
+  // The list shows 12 surveys at a time; the next ones come with "Load more".
+  readonly loadMoreButton = this.page.getByRole("button", { name: "Load more", exact: true });
 
   readonly optionsMenu = new SurveyOptionsMenu(this.page, this);
   readonly copyDialog = new CopySurveyDialog(this.page, this);
@@ -297,11 +308,28 @@ export class SurveyListPage extends AppPage {
     return this;
   }
 
-  @ayme.action({ description: "Opens the summary of the survey whose name is exactly `name`." })
+  @ayme.action({
+    available: async (self: SurveyListPage) =>
+      (await self.loadMoreButton.isVisible()) || "The list already shows every survey its search and filters match",
+  })
+  async loadMore() {
+    const before = await this.rows.count();
+    await this.loadMoreButton.click(T);
+    await this.rows.nth(before).waitFor({ timeout: SERVER_TIMEOUT });
+    return this;
+  }
+
+  @ayme.action({
+    description: "Opens the summary of the survey whose name is exactly `name`, loading more of the list until it shows.",
+  })
   async openSurveySummary(name: string) {
-    const row = new SurveyRow(this.rows.filter({ has: this.page.getByText(name, { exact: true }) }), this.page, this);
+    const matching = this.rows.filter({ has: this.page.getByText(name, { exact: true }) });
+    while ((await matching.count()) === 0 && (await this.loadMoreButton.isVisible())) await this.loadMore();
+    const count = await matching.count();
     // The list leaves out archived surveys and those its search and filters hide.
-    if ((await row.container.count()) === 0) throw new Error(`No survey named ${name} is in the list as filtered now.`);
+    if (count === 0) throw new Error(`No survey named ${name} is in the list as filtered now.`);
+    if (count > 1) throw new Error(`${count} surveys in the list are named ${name}.`);
+    const row = new SurveyRow(matching, this.page, this);
     if (await isDraft(row)) throw new Error(`${name} is a draft survey; a draft has no summary.`);
     return row.openSummary();
   }
