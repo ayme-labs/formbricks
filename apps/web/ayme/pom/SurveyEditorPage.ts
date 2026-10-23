@@ -6,6 +6,9 @@ import { Dialog } from "./Dialog";
 import { Menu } from "./Menu";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
 
+// A 12-question survey keeps the editor's main thread busy past the 1 s default action timeout.
+const T = { timeout: ROUTE_TIMEOUT };
+
 /** The question types the add-question menu offers, by their menu label. */
 const QUESTION_TYPES = [
   "Free text",
@@ -42,15 +45,30 @@ export class AddQuestionMenu extends Menu {
   async addQuestion(type: string) {
     const before = await this.owner.questionCards.count();
     await this.choose(type);
-    await this.owner.questionCards.nth(before).waitFor();
+    await this.owner.questionCards.nth(before).waitFor(T);
     return this.owner;
   }
 }
+
+const canDelete = async (self: QuestionCard) =>
+  (await self.deleteButton.isEnabled()) || "This question cannot be deleted";
 
 /** One question in the editor; a closed card shows only its headline. */
 export class QuestionCard extends AppComponent {
   readonly toggle = this.container.locator(":scope > div > [aria-label='Toggle question details']");
   readonly headline = this.toggle.locator("h3");
+  // The header's icon buttons have no accessible name; the trash icon tells delete apart.
+  readonly deleteButton = this.toggle.getByRole("button").filter({ has: this.container.page().locator("svg.lucide-trash") });
+  // Choices of a single-, multi-select or ranking question, while the card is open.
+  readonly choiceInputs = this.container.getByRole("textbox", { name: /^Option \d+$/ });
+  readonly addChoiceBelowButtons = this.container.getByRole("button", { name: "Add choice below" });
+
+  constructor(
+    container: Locator,
+    readonly owner: SurveyEditorPage
+  ) {
+    super(container);
+  }
   // The first rich-text field of an open card is the question's headline.
   readonly headlineEditor = this.container.locator("[contenteditable='true']").first();
 
@@ -60,17 +78,40 @@ export class QuestionCard extends AppComponent {
 
   @ayme.action
   async open() {
-    if (!(await this.isOpen())) await this.toggle.click();
-    await this.headlineEditor.waitFor();
+    if (!(await this.isOpen())) await this.toggle.click(T);
+    await this.headlineEditor.waitFor(T);
     return this;
   }
 
   @ayme.action({ description: "Replaces the question's headline. Unsaved until the survey is saved (or auto-saved)." })
   async setHeadline(text: string) {
     await this.open();
-    await this.headlineEditor.fill(text);
-    await this.headline.filter({ hasText: text }).waitFor();
+    await this.headlineEditor.fill(text, T);
+    await this.headline.filter({ hasText: text }).waitFor(T);
     return this;
+  }
+
+  @ayme.action({ description: "Adds a choice with this label after the last one. Unsaved until the survey is saved." })
+  async addChoice(label: string) {
+    await this.open();
+    const before = await this.choiceInputs.count();
+    if (before === 0) throw new Error("This question has no choices.");
+    await this.addChoiceBelowButtons.nth(before - 1).click(T);
+    const added = this.choiceInputs.nth(before);
+    await added.waitFor(T);
+    await added.fill(label, T);
+    return this;
+  }
+
+  @ayme.action({
+    available: canDelete,
+    description: "Removes the question and its logic from the survey. Unsaved until the survey is saved.",
+  })
+  async delete() {
+    const before = await this.owner.questionCards.count();
+    await this.deleteButton.click(T);
+    await this.owner.questionCards.nth(before - 1).waitFor({ state: "detached", timeout: ROUTE_TIMEOUT });
+    return this.owner;
   }
 }
 
@@ -88,8 +129,8 @@ export class BlockCard extends AppComponent {
 
   @ayme.action
   async openAddQuestionMenu() {
-    await this.addQuestionButton.click();
-    await this.owner.addQuestionMenu.root.waitFor();
+    await this.addQuestionButton.click(T);
+    await this.owner.addQuestionMenu.root.waitFor(T);
     return this.owner.addQuestionMenu;
   }
 }
@@ -156,7 +197,7 @@ export class SurveyEditorPage extends AppPage {
 
   async questions(): Promise<QuestionCard[]> {
     const cards = await this.questionCards.all();
-    return cards.map((card) => new QuestionCard(card));
+    return cards.map((card) => new QuestionCard(card, this));
   }
 
   async blocks(): Promise<BlockCard[]> {
@@ -166,13 +207,13 @@ export class SurveyEditorPage extends AppPage {
 
   @ayme.action
   async renameSurvey(name: string) {
-    await this.surveyNameInput.fill(name);
+    await this.surveyNameInput.fill(name, T);
     return this;
   }
 
   @ayme.action({ description: "Saves the survey; a published survey's respondents see the changes at once." })
   async save() {
-    await this.saveButton.click();
+    await this.saveButton.click(T);
     await this.savedToast.first().waitFor({ timeout: SERVER_TIMEOUT });
     return this;
   }

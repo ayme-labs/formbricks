@@ -15,11 +15,50 @@ const canGoBack = async (self: ResponseCardModal) =>
 const canGoForward = async (self: ResponseCardModal) =>
   (await self.nextButton.isEnabled()) || "This is the last loaded response in the list";
 
+/** Confirms deleting the open response. */
+export class DeleteResponseDialog extends Dialog {
+  readonly deleteButton = this.root.getByRole("button", { name: "Delete", exact: true });
+  readonly cancelButton = this.root.getByRole("button", { name: "Cancel", exact: true });
+
+  constructor(
+    page: Page,
+    readonly owner: ResponseCardModal
+  ) {
+    super(page, "Delete Response");
+  }
+
+  @ayme.action({
+    description:
+      "Deletes the response with its answers, tags and attachments for everyone on the team; it cannot be undone.",
+  })
+  async confirm() {
+    const responses = this.owner.owner;
+    const before = await responses.rows.count();
+    await this.deleteButton.click(T);
+    await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    // Both dialogs close and the table loses the row.
+    await this.owner.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    if (before > 1) await responses.rows.nth(before - 1).waitFor({ state: "detached", timeout: ROUTE_TIMEOUT });
+    else await responses.noResults.waitFor(T);
+    return responses;
+  }
+
+  @ayme.action
+  async cancel() {
+    await this.cancelButton.click(T);
+    await this.root.waitFor({ state: "hidden", timeout: ROUTE_TIMEOUT });
+    return this.owner;
+  }
+}
+
 /** One response opened from the table, with the previous and next responses one step away. */
 export class ResponseCardModal extends Dialog {
   readonly position = this.root.getByText(/^Response \d+ of \d+$/);
   readonly previousButton = this.root.getByRole("button").filter({ has: this.page.locator("svg.lucide-chevron-left") });
   readonly nextButton = this.root.getByRole("button").filter({ has: this.page.locator("svg.lucide-chevron-right") });
+  readonly deleteButton = this.root.getByRole("button", { name: "Delete response" });
+
+  readonly deleteDialog = new DeleteResponseDialog(this.page, this);
 
   constructor(
     page: Page,
@@ -42,6 +81,13 @@ export class ResponseCardModal extends Dialog {
     await this.nextButton.click(T);
     await this.position.filter({ hasNotText: before ?? "" }).waitFor(T);
     return this;
+  }
+
+  @ayme.action
+  async openDeleteDialog() {
+    await this.deleteButton.click(T);
+    await this.deleteDialog.root.waitFor(T);
+    return this.deleteDialog;
   }
 
   @ayme.action

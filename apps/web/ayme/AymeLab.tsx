@@ -5,6 +5,7 @@ import { AymeProvider, usePageObject } from "@ayme-dev/react";
 import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
 import { type ReactNode, useState } from "react";
 import { DECISION_ENDPOINT_PATH, isGoalLoopOn } from "./lab-switches";
+import { LinkSurveyPage } from "./pom/LinkSurveyPage";
 import { MainNavigation } from "./pom/MainNavigation";
 import { SignInPage } from "./pom/SignInPage";
 import { SurveyEditorPage } from "./pom/SurveyEditorPage";
@@ -24,6 +25,7 @@ const pageObjects = [
   SurveySummaryPage,
   SurveyResponsesPage,
   SurveyEditorPage,
+  LinkSurveyPage,
 ];
 
 // The sidebar is on many routes and no URL states it, so it is registered while this component is mounted.
