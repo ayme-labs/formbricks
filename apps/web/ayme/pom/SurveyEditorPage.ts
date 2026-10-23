@@ -32,6 +32,32 @@ type QuestionType =
   | "Statement (Call to Action)"
   | "Consent";
 
+/**
+ * A logic condition's operator, by its label in the editor. Which ones a question offers depends on its type:
+ * choice and text questions use the worded ones, rating/NPS/number questions the symbols.
+ */
+type LogicOperator =
+  | "Equals"
+  | "Does not equal"
+  | "Contains"
+  | "Does not contain"
+  | "Starts with"
+  | "Does not start with"
+  | "Ends with"
+  | "Does not end with"
+  | "Includes one of"
+  | "Includes all of"
+  | "Does not include one of"
+  | "Does not include all of"
+  | "="
+  | "!="
+  | ">"
+  | "<"
+  | ">="
+  | "<="
+  | "Is submitted"
+  | "Is skipped";
+
 /** The question type menu of one block. */
 export class AddQuestionMenu extends Menu {
   constructor(
@@ -376,9 +402,9 @@ export class BlockCard extends AppComponent {
   @ayme.action({
     // One string literal: a description built with `+` was dropped from the tool without a word (run 7).
     description:
-      "Adds a logic rule to the block: when `question`'s answer equals `answer` (a choice label, or the text typed for a free-text question), respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
+      "Adds a logic rule to the block: when `question`'s answer compares by `operator` to `answer` (a choice label, a scale value such as 4, or the text typed for a free-text question; ignored for Is submitted / Is skipped), respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Choice and text questions offer the worded operators, rating, NPS and number questions the symbols (=, >, <=…). Unsaved until the survey is saved.",
   })
-  async addJumpRule(question: string, answer: string, target: string) {
+  async addJumpRule(question: string, operator: LogicOperator, answer: string, target: string) {
     // A collapsed "Conditional Logic" section renders no rules, so count them with it open (run 7: the new
     // rule's choices went into the existing first rule).
     if ((await this.logicToggle.count()) > 0 && (await this.logicToggle.getAttribute("aria-expanded")) === "false")
@@ -399,9 +425,11 @@ export class BlockCard extends AppComponent {
       await c.filter({ hasText: option }).waitFor(T);
     };
     await pick(combo("-conditionValue"), question);
-    await pick(combo("-conditionOperator"), "Equals");
+    await pick(combo("-conditionOperator"), operator);
     const typed = rule.getByRole("textbox", { name: "Select or type value" });
-    if (await typed.isVisible()) await typed.fill(answer, T);
+    if (operator === "Is submitted" || operator === "Is skipped") {
+      // These take no value: the value box is gone.
+    } else if (await typed.isVisible()) await typed.fill(answer, T);
     else await pick(combo("-conditionMatchValue"), answer);
     await pick(combo("-objective"), "Jump to block");
     await pick(combo("-target"), target);
