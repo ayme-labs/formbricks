@@ -14,3 +14,8 @@ export async function markToasts(page: Page) {
 export async function waitForNewToast(page: Page, text: string, timeout: number) {
   await page.locator(`${TOASTS}:not([${SEEN}])`, { hasText: text }).first().waitFor({ timeout });
 }
+
+/** Waits for any toast that appeared after `markToasts`: a success or the app's refusal, whose text the result shows. */
+export async function waitForAnyNewToast(page: Page, timeout: number) {
+  await page.locator(`${TOASTS}:not([${SEEN}])`).filter({ hasText: /\S/ }).first().waitFor({ timeout });
+}

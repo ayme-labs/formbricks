@@ -13,6 +13,7 @@ import { SurveyListPage } from "./pom/SurveyListPage";
 import { SurveyResponsesPage } from "./pom/SurveyResponsesPage";
 import { SurveySummaryPage } from "./pom/SurveySummaryPage";
 import { TemplateGalleryPage } from "./pom/TemplateGalleryPage";
+import { SettingsNavigation, WorkspaceAppearancePage, WorkspaceGeneralPage } from "./pom/WorkspaceSettingsPage";
 
 // document.modelContext, before the provider publishes to it. Native WebMCP is kept where present.
 if (typeof window !== "undefined") initializeWebMCPPolyfill();
@@ -28,11 +29,15 @@ const pageObjects = [
   SurveyEditorPage,
   LinkSurveyPage,
   TemplateGalleryPage,
+  WorkspaceGeneralPage,
+  WorkspaceAppearancePage,
 ];
 
-// The sidebar is on many routes and no URL states it, so it is registered while this component is mounted.
+// The sidebars are on many routes and no URL states them, so they are registered while this component is
+// mounted; each is present while its own root is on the page (settings swap the workspace sidebar for theirs).
 function SidebarPageObject() {
   usePageObject(MainNavigation);
+  usePageObject(SettingsNavigation);
   return null;
 }
 

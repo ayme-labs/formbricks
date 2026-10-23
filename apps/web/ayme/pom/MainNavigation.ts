@@ -4,6 +4,7 @@ import { AppComponent } from "./AppComponent";
 import { Menu } from "./Menu";
 import { SignInPage } from "./SignInPage";
 import { ROUTE_TIMEOUT, SurveyListPage } from "./SurveyListPage";
+import { WorkspaceGeneralPage } from "./WorkspaceSettingsPage";
 
 /** The signed-in user's menu at the bottom of the sidebar: account, organization and sign-out. */
 export class AccountMenu extends Menu {
@@ -25,6 +26,7 @@ export class AccountMenu extends Menu {
 export class MainNavigation extends AppComponent {
   readonly surveysLink = this.container.getByRole("link", { name: "Surveys" });
   readonly contactsLink = this.container.getByRole("link", { name: "Contacts" });
+  readonly settingsLink = this.container.getByRole("link", { name: "Settings" });
   // Set in the constructor: field initializers run before the `page` parameter property is assigned.
   readonly accountButton: Locator;
   readonly accountMenu: AccountMenu;
@@ -43,6 +45,14 @@ export class MainNavigation extends AppComponent {
     const list = new SurveyListPage(this.page);
     await list.heading.waitFor({ timeout: ROUTE_TIMEOUT });
     return list;
+  }
+
+  @ayme.action({ description: "Opens the workspace's settings at General; the settings sidebar replaces this one there." })
+  async openSettings() {
+    await this.settingsLink.click({ timeout: ROUTE_TIMEOUT });
+    const general = new WorkspaceGeneralPage(this.page);
+    await general.heading.waitFor({ timeout: ROUTE_TIMEOUT });
+    return general;
   }
 
   @ayme.action
