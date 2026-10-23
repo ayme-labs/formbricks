@@ -374,7 +374,7 @@ export class BlockCard extends AppComponent {
   @ayme.action({
     // One string literal: a description built with `+` was dropped from the tool without a word (run 7).
     description:
-      "Adds a logic rule to the block: when `question`'s answer equals the choice `answer`, respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
+      "Adds a logic rule to the block: when `question`'s answer equals `answer` (a choice label, or the text typed for a free-text question), respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
   })
   async addJumpRule(question: string, answer: string, target: string) {
     // A collapsed "Conditional Logic" section renders no rules, so count them with it open (run 7: the new
@@ -385,20 +385,24 @@ export class BlockCard extends AppComponent {
     await this.addLogicButton.click(T);
     const rule = this.logicRules.nth(before);
     await rule.waitFor(T);
-    // A rule's comboboxes, in order: question, operator, value, action, action target (the last rule adds the
-    // fallback). They have no accessible names; each opens a "Suggestions" listbox portaled to the document.
-    const combos = rule.getByRole("combobox");
-    const pick = async (combo: Locator, option: string) => {
-      if ((await combo.textContent())?.trim() === option) return;
-      await combo.click(T);
+    // A rule's comboboxes have no accessible names but stable id suffixes: conditionValue (question),
+    // conditionOperator, conditionMatchValue (the value), action-…-objective, action-…-target. Each opens a
+    // "Suggestions" listbox portaled to the document. For a free-text question the value is a textbox
+    // "Select or type value" and its combobox is hidden (run 8: picking by position clicked the hidden one).
+    const combo = (suffix: string) => rule.locator(`[role='combobox'][id$='${suffix}']`).first();
+    const pick = async (c: Locator, option: string) => {
+      if ((await c.textContent())?.trim() === option) return;
+      await c.click(T);
       await this.owner.page.getByRole("listbox", { name: "Suggestions" }).getByRole("option", { name: option, exact: true }).click(T);
-      await combo.filter({ hasText: option }).waitFor(T);
+      await c.filter({ hasText: option }).waitFor(T);
     };
-    await pick(combos.nth(0), question);
-    await pick(combos.nth(1), "Equals");
-    await pick(combos.nth(2), answer);
-    await pick(combos.nth(3), "Jump to block");
-    await pick(combos.nth(4), target);
+    await pick(combo("-conditionValue"), question);
+    await pick(combo("-conditionOperator"), "Equals");
+    const typed = rule.getByRole("textbox", { name: "Select or type value" });
+    if (await typed.isVisible()) await typed.fill(answer, T);
+    else await pick(combo("-conditionMatchValue"), answer);
+    await pick(combo("-objective"), "Jump to block");
+    await pick(combo("-target"), target);
     return this;
   }
 
