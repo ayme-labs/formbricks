@@ -16,8 +16,11 @@ const takesRating = async (self: RespondentQuestion) =>
   (await self.ratingOptions.first().isVisible()) || "This question is not a rating or NPS scale";
 const takesText = async (self: RespondentQuestion) =>
   (await self.textAnswer.isVisible()) || "This question takes no text";
-const hasOptions = async (self: RespondentQuestion) =>
-  (await self.options.first().isVisible()) || "This question has no answer options";
+// Rating scales are radios too, but take a number (rate), not an option label.
+const hasOptions = async (self: RespondentQuestion) => {
+  if (await self.ratingOptions.first().isVisible()) return "This question is a rating scale";
+  return (await self.options.first().isVisible()) || "This question has no answer options";
+};
 const hasFields = async (self: RespondentQuestion) =>
   (await self.textFields.count()) > 1 || "This question has no separate fields";
 const takesDate = async (self: RespondentQuestion) =>
@@ -46,7 +49,7 @@ export class RespondentQuestion extends AppComponent {
   readonly matrix = this.container.getByRole("table");
   readonly rankingOptions = this.container.getByRole("group", { name: "Ranking options" });
 
-  @ayme.action({ available: takesText })
+  @ayme.action({ available: takesText, description: "Types the answer into a free-text question, replacing what it held." })
   async answerText(text: string) {
     await this.textAnswer.fill(text, T);
     return this;
@@ -137,6 +140,9 @@ export class LinkSurveyPage extends AppPage {
   readonly submitButton = this.survey.locator("button.border-submit-button-border[dir='auto']");
   readonly backButton = this.survey.getByRole("button", { name: "Back" });
   readonly thankYou = this.survey.getByRole("heading", { name: "Thank you!" });
+  // A survey without an ending card (the seeded ones) shows only empty cards once submitted.
+  // (An empty, transparent placeholder card sits behind the questions all along, so a single empty card says nothing.)
+  readonly noQuestionCards = this.survey.getByTestId("stacked-cards-container").filter({ hasNot: this.page.locator("form") });
   // A plain span, no alert role; the only hook is its text.
   readonly requiredMessage = this.survey.getByText("Please fill out this field");
 
@@ -153,7 +159,7 @@ export class LinkSurveyPage extends AppPage {
   @ayme.action({
     available: inProgress,
     description:
-      "Goes on to the next page of questions; on the last one it submits the response, which the survey's team then sees.",
+      "Goes on to the next page of questions; on the last one it submits the response, which the survey's team then sees. A survey without an ending card then shows an empty card.",
   })
   async next() {
     const firstId = await this.questionItems.first().getAttribute("id");
@@ -173,7 +179,10 @@ export class LinkSurveyPage extends AppPage {
   }
 
   private async pageShown() {
-    await this.questionItems.first().or(this.thankYou).waitFor({ timeout: SERVER_TIMEOUT });
+    const shown = this.questionItems.first().or(this.thankYou);
+    await shown.or(this.noQuestionCards).first().waitFor({ timeout: SERVER_TIMEOUT });
+    // Between two pages the cards are empty for a moment too: give the next page 2 s to render.
+    if (await this.noQuestionCards.isVisible()) await shown.first().waitFor({ timeout: 2000 }).catch(() => undefined);
   }
 
   @ayme.action({ available: canGoBack, description: "Goes back to the previous page of questions; answers given so far are kept." })
