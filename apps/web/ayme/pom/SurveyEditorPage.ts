@@ -5,6 +5,7 @@ import { AppPage } from "./AppPage";
 import { Dialog } from "./Dialog";
 import { Menu } from "./Menu";
 import { ROUTE_TIMEOUT, SERVER_TIMEOUT } from "./Timing";
+import { markToasts } from "./Toast";
 
 // A 12-question survey keeps the editor's main thread busy past the 1 s default action timeout.
 const T = { timeout: ROUTE_TIMEOUT };
@@ -462,7 +463,7 @@ export async function openEditorWith(editButton: Locator, dialog: EditActiveSurv
 // While the editor loads neither button shows; a published survey shows "Save" and no Activate.
 const canActivate = async (self: SurveyEditorPage) => {
   if (await self.activateButton.isVisible()) return true;
-  if (await self.page.getByRole("button", { name: "Save", exact: true }).isVisible()) return "The survey is already published";
+  if (await self.page.locator("button[data-save-button]", { hasText: /^Save$/ }).isVisible()) return "The survey is already published";
   return "The editor shows no Activate button";
 };
 
@@ -472,8 +473,9 @@ export class SurveyEditorPage extends AppPage {
 
   readonly backButton = this.page.getByRole("button", { name: "Back", exact: true });
   readonly surveyNameInput = this.page.getByRole("textbox", { name: "Survey name" });
-  // "Save as draft" while the survey is a draft, "Save" once it is published.
-  readonly saveButton = this.page.getByRole("button", { name: /^Save( as draft)?$/ });
+  // "Save as draft" while the survey is a draft, "Save" once it is published. An open question's "Question ID"
+  // field has its own "Save" button (run 8: strict mode violation), so match the header's data attribute.
+  readonly saveButton = this.page.locator("button[data-save-button]");
   readonly savedToast = this.page.getByText("Changes saved.");
   // Blocks and their questions both carry the item id and scroll-mt-16; only a block has a header.
   readonly blockCards = this.page.locator("div[id].scroll-mt-16").filter({ has: this.page.getByTestId("block-card-header") });
@@ -551,10 +553,16 @@ export class SurveyEditorPage extends AppPage {
     return Promise.race([left, refused]);
   }
 
-  @ayme.action({ description: "Saves the survey; a published survey's respondents see the changes at once." })
+  @ayme.action({
+    description:
+      "Saves the survey; a published survey's respondents see the changes at once. When Formbricks refuses the survey as it is (for example a logic rule whose jump destination was deleted), the editor stays and its message shows as a new status toast.",
+  })
   async save() {
+    // Run 8: a refused save shows a status toast such as "Jump destination in rule 1 of “Block 1” no longer
+    // exists."; waiting only for "Changes saved." answered a 10 s timeout. Any new toast ends the wait.
+    await markToasts(this.page);
     await this.saveButton.click(T);
-    await this.savedToast.first().waitFor({ timeout: SERVER_TIMEOUT });
+    await this.page.locator("[role='status']:not([data-ayme-seen])").filter({ hasText: /\S/ }).first().waitFor({ timeout: SERVER_TIMEOUT });
     return this;
   }
 }
