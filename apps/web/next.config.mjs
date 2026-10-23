@@ -102,7 +102,11 @@ const nextConfig = {
         loaders: [
           {
             loader: "@ayme-dev/unplugin-ayme/turbopack-loader",
-            options: { tsconfigPath: fileURLToPath(new URL("./ayme/tsconfig.pom.json", import.meta.url)) },
+            options: {
+              // Ayme is in the build only in lab mode, which lab:dev sets.
+              include: process.env.AYME_LAB === "1",
+              tsconfigPath: fileURLToPath(new URL("./ayme/tsconfig.pom.json", import.meta.url)),
+            },
           },
         ],
         as: "*.js",
