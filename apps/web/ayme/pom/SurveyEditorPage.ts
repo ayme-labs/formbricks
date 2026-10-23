@@ -316,6 +316,8 @@ export class BlockCard extends AppComponent {
   readonly addQuestionButton = this.container.getByRole("button", { name: "Add question to block" });
   readonly header = this.container.getByTestId("block-card-header");
   readonly addLogicButton = this.container.getByRole("button", { name: "Add logic", exact: true });
+  // Only a block with rules has the section's toggle; aria-expanded tells whether its rules are rendered.
+  readonly logicToggle = this.container.locator("button[aria-label='Conditional Logic']");
   // Each logic rule is a bordered card in the block's "Conditional Logic" section.
   readonly logicRules = this.container.locator("div.rounded-lg.border.bg-slate-50.p-3:has(> div [role='combobox'])");
 
@@ -370,11 +372,15 @@ export class BlockCard extends AppComponent {
   }
 
   @ayme.action({
+    // One string literal: a description built with `+` was dropped from the tool without a word (run 7).
     description:
-      "Adds a logic rule to the block: when `question`'s answer equals the choice `answer`, respondents jump to `target` " +
-      "(a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
+      "Adds a logic rule to the block: when `question`'s answer equals the choice `answer`, respondents jump to `target` (a block name or an ending card's headline) instead of the next block. Unsaved until the survey is saved.",
   })
   async addJumpRule(question: string, answer: string, target: string) {
+    // A collapsed "Conditional Logic" section renders no rules, so count them with it open (run 7: the new
+    // rule's choices went into the existing first rule).
+    if ((await this.logicToggle.count()) > 0 && (await this.logicToggle.getAttribute("aria-expanded")) === "false")
+      await this.logicToggle.click(T);
     const before = await this.logicRules.count();
     await this.addLogicButton.click(T);
     const rule = this.logicRules.nth(before);
