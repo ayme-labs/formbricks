@@ -2,13 +2,9 @@
 
 import { decisionEndpoint } from "@ayme-dev/ayme";
 import { AymeProvider } from "@ayme-dev/react";
-import { initializeWebMCPPolyfill } from "@mcp-b/webmcp-polyfill";
 import { type ReactNode, useState } from "react";
 import { AymePageObjects } from "./AymePageObjects";
 import { DECISION_ENDPOINT_PATH, arePageObjectsOff, isGoalLoopOn } from "./lab-switches";
-
-// document.modelContext, before the provider publishes to it. Native WebMCP is kept where present.
-if (typeof window !== "undefined") initializeWebMCPPolyfill();
 
 const webMCP = { enabled: true };
 

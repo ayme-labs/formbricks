@@ -489,9 +489,6 @@ importers:
       '@lexical/utils':
         specifier: 0.41.0
         version: 0.41.0
-      '@mcp-b/webmcp-polyfill':
-        specifier: 5.1.0
-        version: 5.1.0
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
@@ -3123,14 +3120,6 @@ packages:
     resolution: {integrity: sha512-PaKTxSbVC4fpqUjQ7vUL9RkNF1PjL8TFl5jRe03PqoPYpE33buf3VXX6+cOUEfv9+uknSqLCPHoBS/4jN3a97w==}
     peerDependencies:
       yjs: '>=13.5.22'
-
-  '@mcp-b/webmcp-polyfill@5.1.0':
-    resolution: {integrity: sha512-KL09hniFssPY8HBO3qzurWPqm+1JYRwV3wx6x2XSySgo+6BL1XHGsHGIoAO7U9zzigv7TA5keNBoZ+3P1jq18g==}
-    engines: {node: '>=20'}
-
-  '@mcp-b/webmcp-types@5.1.0':
-    resolution: {integrity: sha512-twOKDUr7al60K890HvRcNvoHSfQ2rnGeKJiQs6eUr+Leg+LQ6K+yz3F4K70jykMK1a09ZIgYb3Oc7mAypuKPig==}
-    engines: {node: '>=20'}
 
   '@mdx-js/react@3.1.1':
     resolution: {integrity: sha512-f++rKLQgUVYDAtECQ6fn/is15GkEH9+nZPM3MS0RcxVqoTfawHvDlSCH7JbMhAM6uJ32v3eXLvLmLvjGu7PTQw==}
@@ -14348,15 +14337,6 @@ snapshots:
       '@lexical/selection': 0.41.0
       lexical: 0.41.0
       yjs: 13.6.28
-
-  '@mcp-b/webmcp-polyfill@5.1.0':
-    dependencies:
-      '@mcp-b/webmcp-types': 5.1.0
-      '@standard-schema/spec': 1.1.0
-
-  '@mcp-b/webmcp-types@5.1.0':
-    dependencies:
-      '@modelcontextprotocol/server': 2.0.0
 
   '@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6)':
     dependencies:
