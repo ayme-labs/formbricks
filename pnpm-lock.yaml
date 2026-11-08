@@ -2017,9 +2017,9 @@ packages:
   '@ayme-dev/ayme@file:.ayme-lab/packages/ayme':
     resolution: {directory: .ayme-lab/packages/ayme, type: directory}
     peerDependencies:
-      '@ayme-dev/inspector': 0.1.0-alpha.0
-      '@ayme-dev/mcp': 0.1.0-alpha.0
-      '@ayme-dev/webmcp': 0.1.0-alpha.0
+      '@ayme-dev/inspector': 0.2.0
+      '@ayme-dev/mcp': 0.2.0
+      '@ayme-dev/webmcp': 0.2.0
       '@playwright/test': '>=1.29 <1.65'
     peerDependenciesMeta:
       '@ayme-dev/inspector':
@@ -2035,8 +2035,11 @@ packages:
     resolution: {directory: .ayme-lab/packages/mcp, type: directory}
     hasBin: true
     peerDependencies:
+      '@ayme-dev/inspector': 0.2.0
       '@playwright/test': '>=1.29 <1.65'
     peerDependenciesMeta:
+      '@ayme-dev/inspector':
+        optional: true
       '@playwright/test':
         optional: true
 
@@ -5426,6 +5429,7 @@ packages:
   '@smithy/core@3.24.2':
     resolution: {integrity: sha512-IKS7qX59fAGCYBmt5JChcDswQDupZqT2Yn2ZBA3UgTlsjRNNkQzZobbn95xoAAdtTyJmBiJB3Y02qR3rgy3Zog==}
     engines: {node: '>=18.0.0'}
+    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.2.12':
     resolution: {integrity: sha512-cr2lR792vNZcYMriSIj+Um3x9KWrjcu98kn234xA6reOAFMmbRpQMOv8KPgEmLLtx3eldU6c5wALKFqNOhugmg==}
@@ -11918,6 +11922,9 @@ packages:
     resolution: {integrity: sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ==}
     engines: {node: '>=20'}
 
+  webmcp-types@0.1.10:
+    resolution: {integrity: sha512-U4GQ1RpJ0tqCUt2ALMV9Pnhi+hsy8L31f/Q1v4mLVhW64r5sYhh+2+SjP/Lq4/9jP33vZgNkuRZARJl65A/ZIg==}
+
   webpack-sources@3.4.1:
     resolution: {integrity: sha512-eACpxRN02yaawnt+uUNIF7Qje6A9zArxBbcAJjK1PK3S9Ycg5jIuJ8pW4q8EMnwNZCEGltcjkRx1QzOxOkKD8A==}
     engines: {node: '>=10.13.0'}
@@ -13042,6 +13049,8 @@ snapshots:
       playwright-core: 1.58.2
 
   '@ayme-dev/ayme@file:.ayme-lab/packages/ayme(@ayme-dev/mcp@file:.ayme-lab/packages/mcp(@playwright/test@1.58.2)(typescript@5.9.3))(@ayme-dev/webmcp@file:.ayme-lab/packages/webmcp(@playwright/test@1.58.2))(@playwright/test@1.58.2)':
+    dependencies:
+      zod: 4.6.5
     optionalDependencies:
       '@ayme-dev/mcp': file:.ayme-lab/packages/mcp(@playwright/test@1.58.2)(typescript@5.9.3)
       '@ayme-dev/webmcp': file:.ayme-lab/packages/webmcp(@playwright/test@1.58.2)
@@ -13097,7 +13106,7 @@ snapshots:
 
   '@ayme-dev/webmcp@file:.ayme-lab/packages/webmcp(@playwright/test@1.58.2)':
     dependencies:
-      '@mcp-b/webmcp-types': 5.1.0
+      webmcp-types: 0.1.10
     optionalDependencies:
       '@playwright/test': 1.58.2
 
@@ -14388,7 +14397,7 @@ snapshots:
 
   '@modelcontextprotocol/core@2.0.0':
     dependencies:
-      zod: 4.3.6
+      zod: 4.6.5
 
   '@modelcontextprotocol/sdk@1.32.1(zod@4.3.6)':
     dependencies:
@@ -24293,6 +24302,8 @@ snapshots:
   webidl-conversions@7.0.0: {}
 
   webidl-conversions@8.0.1: {}
+
+  webmcp-types@0.1.10: {}
 
   webpack-sources@3.4.1: {}
 
