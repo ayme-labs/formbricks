@@ -15,9 +15,8 @@ export class SurveySummaryPage extends AppPage {
   readonly surveyTitleHeading: Locator;
   @ayme.child
   readonly editButton: Locator;
-  /** The dialog open over the summary, such as the share dialog. */
   @ayme.child
-  readonly modal: Modal;
+  readonly shareSurveyDialog: Modal;
   @ayme.child
   readonly editActiveSurveyDialog: EditActiveSurveyDialog;
 
@@ -25,7 +24,12 @@ export class SurveySummaryPage extends AppPage {
     super(page);
     this.surveyTitleHeading = page.getByRole("heading", { level: 1 });
     this.editButton = page.getByRole("button", { name: "Edit", exact: true });
-    this.modal = new Modal(page.getByRole("dialog"));
+    // The share dialog has no accessible name, so it is found by its copy-link button.
+    this.shareSurveyDialog = new Modal(
+      page
+        .getByRole("dialog")
+        .filter({ has: page.getByRole("button", { name: "Copy survey link to clipboard", exact: true }) })
+    );
     this.editActiveSurveyDialog = new EditActiveSurveyDialog(
       page.getByRole("dialog", { name: "Edit an active survey?", exact: true })
     );

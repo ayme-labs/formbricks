@@ -177,11 +177,11 @@ async function walkThroughScreens(
   await page.waitForURL(new RegExp(`/workspaces/${user.workspaceId}/surveys/${surveyId}/summary`));
   const surveySummaryPage = new SurveySummaryPage(page);
   // Saving a new survey opens its sharing dialog over the summary.
-  await expectExactlyOnce(surveySummaryPage.modal.root);
-  await expectExactlyOnce(surveySummaryPage.modal.closeButton);
+  await expectExactlyOnce(surveySummaryPage.shareSurveyDialog.root);
+  await expectExactlyOnce(surveySummaryPage.shareSurveyDialog.closeButton);
   await expectTools(page, ["Modal.close", "SurveySummaryPage.edit"]);
-  await surveySummaryPage.modal.close();
-  await expect(surveySummaryPage.modal.root).toHaveCount(0);
+  await surveySummaryPage.shareSurveyDialog.close();
+  await expect(surveySummaryPage.shareSurveyDialog.root).toHaveCount(0);
   await expectExactlyOnce(surveySummaryPage.surveyTitleHeading);
   await expect(surveySummaryPage.surveyTitleHeading).toHaveText(surveyName);
   await expectExactlyOnce(surveySummaryPage.editButton);
