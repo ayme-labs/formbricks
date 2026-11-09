@@ -39,7 +39,8 @@ export class SignInPage extends AppPage {
     await this.emailInput.fill(email);
     await this.passwordInput.fill(password);
     // An error left from an earlier attempt would read as this attempt's outcome.
-    await this.errorToast.first().waitFor({ state: "hidden" });
+    // A toast lasts a few seconds, longer than an action waits by default.
+    await this.errorToast.first().waitFor({ state: "hidden", timeout: 10_000 });
     await this.logInWithEmailButton.click();
     // Sign-in goes to "/", which redirects to where the user starts.
     const signedIn = this.page.waitForURL((url) => url.pathname !== this.path && url.pathname !== "/");

@@ -6,7 +6,7 @@ import { SurveySummaryPage } from "./SurveySummaryPage";
 
 @ayme({
   description:
-    "Edits one survey. A draft saves itself every few seconds; a published survey keeps changes only once saved.",
+    "Edits one survey. A draft without a publish date saves itself every ten seconds; other surveys keep changes only once saved.",
 })
 export class SurveyEditorPage extends AppPage {
   readonly path = "/workspaces/:workspaceId/surveys/:surveyId/edit";
@@ -60,7 +60,8 @@ export class SurveyEditorPage extends AppPage {
   })
   async saveAndClose(): Promise<SurveySummaryPage | ActivateSurveyDialog | this> {
     // A toast left from an earlier attempt would read as this attempt's outcome.
-    await this.toast.first().waitFor({ state: "hidden" });
+    // A toast lasts a few seconds, longer than an action waits by default.
+    await this.toast.first().waitFor({ state: "hidden", timeout: 10_000 });
     await this.saveAndCloseButton.click();
     const summary = new SurveySummaryPage(this.page);
     await summary.surveyTitleHeading
