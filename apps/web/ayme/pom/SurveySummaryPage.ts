@@ -2,7 +2,7 @@ import { ayme } from "@ayme-dev/ayme";
 import type { Locator, Page } from "@playwright/test";
 import { AppPage } from "./AppPage";
 import { EditActiveSurveyDialog } from "./EditActiveSurveyDialog";
-import { Modal } from "./Modal";
+import { ShareSurveyDialog } from "./ShareSurveyDialog";
 import { SurveyEditorPage } from "./SurveyEditorPage";
 
 @ayme({
@@ -16,7 +16,7 @@ export class SurveySummaryPage extends AppPage {
   @ayme.child
   readonly editButton: Locator;
   @ayme.child
-  readonly shareSurveyDialog: Modal;
+  readonly shareSurveyDialog: ShareSurveyDialog;
   @ayme.child
   readonly editActiveSurveyDialog: EditActiveSurveyDialog;
 
@@ -25,7 +25,7 @@ export class SurveySummaryPage extends AppPage {
     this.surveyTitleHeading = page.getByRole("heading", { level: 1 });
     this.editButton = page.getByRole("button", { name: "Edit", exact: true });
     // The share dialog has no accessible name, so it is found by its copy-link button.
-    this.shareSurveyDialog = new Modal(
+    this.shareSurveyDialog = new ShareSurveyDialog(
       page
         .getByRole("dialog")
         .filter({ has: page.getByRole("button", { name: "Copy survey link to clipboard", exact: true }) })

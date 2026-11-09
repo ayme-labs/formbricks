@@ -179,9 +179,9 @@ async function walkThroughScreens(
   // Saving a new survey opens its sharing dialog over the summary.
   await expectExactlyOnce(surveySummaryPage.shareSurveyDialog.root);
   await expectExactlyOnce(surveySummaryPage.shareSurveyDialog.closeButton);
-  await expectTools(page, ["Modal.close", "SurveySummaryPage.edit"]);
-  await surveySummaryPage.shareSurveyDialog.close();
-  await expect(surveySummaryPage.shareSurveyDialog.root).toHaveCount(0);
+  await expectTools(page, ["ShareSurveyDialog.close", "SurveySummaryPage.edit"]);
+  const summaryAfterShare = await surveySummaryPage.shareSurveyDialog.close();
+  await expect(summaryAfterShare.shareSurveyDialog.root).toHaveCount(0);
   await expectExactlyOnce(surveySummaryPage.surveyTitleHeading);
   await expect(surveySummaryPage.surveyTitleHeading).toHaveText(surveyName);
   await expectExactlyOnce(surveySummaryPage.editButton);

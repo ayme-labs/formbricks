@@ -2,7 +2,7 @@ import { ayme } from "@ayme-dev/ayme";
 import type { Locator } from "@playwright/test";
 import { AppComponent } from "./AppComponent";
 
-/** A dialog whose only action is to close it, such as the summary's share dialog. */
+/** A dialog closed by its Close button. */
 export class Modal extends AppComponent {
   @ayme.child
   readonly closeButton: Locator;
