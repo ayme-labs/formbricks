@@ -3,10 +3,16 @@
 import { decisionEndpoint } from "@ayme-dev/ayme";
 import { AymeProvider } from "@ayme-dev/react";
 import { type ReactNode, useState } from "react";
-import { AymePageObjects } from "./AymePageObjects";
 import { DECISION_ENDPOINT_PATH, arePageObjectsOff, isGoalLoopOn } from "./lab-switches";
+import { SignInPage } from "./pom/SignInPage";
+import { SurveyEditorPage } from "./pom/SurveyEditorPage";
+import { SurveyNavigationPage } from "./pom/SurveyNavigationPage";
+import { SurveySummaryPage } from "./pom/SurveySummaryPage";
 
 const webMCP = { enabled: true };
+
+// Each page is present on its own path, so the page publishes only the current screen's tools.
+const PAGE_OBJECTS = [SignInPage, SurveyNavigationPage, SurveyEditorPage, SurveySummaryPage];
 
 /**
  * Ayme in the Formbricks lab app: the runtime owner, the page objects of the current screen unless
@@ -21,14 +27,13 @@ export function AymeLab({ labMode, children }: Readonly<{ labMode: boolean; chil
       : undefined
   );
   // Off, the page publishes only snapshot and the Browser Tools: Ayme in an app without page objects.
-  const [pageObjects] = useState(
-    () => !(typeof document !== "undefined" && arePageObjectsOff(document.cookie))
+  const [pageObjects] = useState(() =>
+    typeof document !== "undefined" && arePageObjectsOff(document.cookie) ? [] : PAGE_OBJECTS
   );
 
   // Gated on lab mode the way an app gates it on its dev flag: a page then looks for the agent's server.
   return (
-    <AymeProvider webMCP={webMCP} goalLoop={goalLoop} agentConnection={labMode}>
-      {pageObjects && <AymePageObjects />}
+    <AymeProvider webMCP={webMCP} pageObjects={pageObjects} goalLoop={goalLoop} agentConnection={labMode}>
       {children}
     </AymeProvider>
   );

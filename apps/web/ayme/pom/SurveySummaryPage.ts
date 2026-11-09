@@ -1,27 +1,31 @@
 import { ayme } from "@ayme-dev/ayme";
 import type { Locator, Page } from "@playwright/test";
+import { AppPage } from "./AppPage";
+import { ShareSurveyDialog } from "./ShareSurveyDialog";
+import { SurveyEditorPage } from "./SurveyEditorPage";
 
-/** A survey's summary at /workspaces/<id>/surveys/<id>/summary. */
-@ayme
-export class SurveySummaryPage {
+export class SurveySummaryPage extends AppPage {
+  readonly path = "/workspaces/:workspaceId/surveys/:surveyId/summary";
+
+  @ayme.child
   readonly surveyTitleHeading: Locator;
+  @ayme.child
   readonly editButton: Locator;
-  /** Closes the sharing dialog the summary opens after a survey is saved and closed. */
-  readonly closeDialogButton: Locator;
+  @ayme.child
+  readonly shareDialog: ShareSurveyDialog;
 
   constructor(page: Page) {
+    super(page);
     this.surveyTitleHeading = page.getByRole("heading", { level: 1 });
     this.editButton = page.getByRole("button", { name: "Edit", exact: true });
-    this.closeDialogButton = page.getByRole("dialog").getByRole("button", { name: "Close", exact: true });
+    this.shareDialog = new ShareSurveyDialog(page.getByRole("dialog"));
   }
 
-  @ayme.action({ description: "Close the dialog open over the summary." })
-  async closeDialog() {
-    await this.closeDialogButton.click();
-  }
-
-  @ayme.action({ description: "Open this survey in the survey editor." })
-  async edit() {
+  @ayme.action
+  async edit(): Promise<SurveyEditorPage> {
     await this.editButton.click();
+    const editor = new SurveyEditorPage(this.page);
+    await editor.surveyNameInput.waitFor();
+    return editor;
   }
 }
