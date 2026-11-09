@@ -1,20 +1,26 @@
 import { ayme } from "@ayme-dev/ayme";
 import type { Locator, Page } from "@playwright/test";
+import { AppPage } from "./AppPage";
+import { SurveyEditorPage } from "./SurveyEditorPage";
 
-/** The screen where a new organization creates its first survey, from a template or from scratch. */
-@ayme
-export class SurveyNavigationPage {
+@ayme({ description: "Where an organization without surveys creates its first one." })
+export class SurveyNavigationPage extends AppPage {
+  readonly path = "/organizations/:organizationId/workspaces/new/survey";
+
+  @ayme.child
   readonly startFromScratchButton: Locator;
 
   constructor(page: Page) {
-    this.startFromScratchButton = page.getByRole("button", {
-      name: "Start from scratch Create your own survey questions",
-      exact: true,
-    });
+    super(page);
+    // The option's accessible name runs on into its description, "Create your own survey questions".
+    this.startFromScratchButton = page.getByRole("button", { name: /^Start from scratch\b/ });
   }
 
-  @ayme.action({ description: "Create a new survey from scratch and open it in the survey editor." })
-  async startFromScratch() {
+  @ayme.action({ description: "Creates an empty survey." })
+  async startFromScratch(): Promise<SurveyEditorPage> {
     await this.startFromScratchButton.click();
+    const editor = new SurveyEditorPage(this.page);
+    await editor.surveyNameInput.waitFor();
+    return editor;
   }
 }
