@@ -1,9 +1,13 @@
 import { ayme } from "@ayme-dev/ayme";
 import type { Locator, Page } from "@playwright/test";
 import { AppPage } from "./AppPage";
-import { ShareSurveyDialog } from "./ShareSurveyDialog";
+import { EditActiveSurveyDialog } from "./EditActiveSurveyDialog";
+import { Modal } from "./Modal";
 import { SurveyEditorPage } from "./SurveyEditorPage";
 
+@ayme({
+  description: "A survey's results. A survey published for the first time opens here with its share dialog.",
+})
 export class SurveySummaryPage extends AppPage {
   readonly path = "/workspaces/:workspaceId/surveys/:surveyId/summary";
 
@@ -11,21 +15,28 @@ export class SurveySummaryPage extends AppPage {
   readonly surveyTitleHeading: Locator;
   @ayme.child
   readonly editButton: Locator;
+  /** The dialog open over the summary, such as the share dialog. */
   @ayme.child
-  readonly shareDialog: ShareSurveyDialog;
+  readonly modal: Modal;
+  @ayme.child
+  readonly editActiveSurveyDialog: EditActiveSurveyDialog;
 
   constructor(page: Page) {
     super(page);
     this.surveyTitleHeading = page.getByRole("heading", { level: 1 });
     this.editButton = page.getByRole("button", { name: "Edit", exact: true });
-    this.shareDialog = new ShareSurveyDialog(page.getByRole("dialog"));
+    this.modal = new Modal(page.getByRole("dialog"));
+    this.editActiveSurveyDialog = new EditActiveSurveyDialog(
+      page.getByRole("dialog", { name: "Edit an active survey?", exact: true })
+    );
   }
 
   @ayme.action
-  async edit(): Promise<SurveyEditorPage> {
+  async edit(): Promise<SurveyEditorPage | EditActiveSurveyDialog> {
     await this.editButton.click();
+    // A survey with responses asks first.
     const editor = new SurveyEditorPage(this.page);
-    await editor.surveyNameInput.waitFor();
-    return editor;
+    await editor.surveyNameInput.or(this.editActiveSurveyDialog.root).first().waitFor();
+    return (await this.editActiveSurveyDialog.root.isVisible()) ? this.editActiveSurveyDialog : editor;
   }
 }

@@ -14,6 +14,9 @@ export class SurveyEditorPage extends AppPage {
   readonly questionTextEditor: Locator;
   @ayme.child
   readonly saveAndCloseButton: Locator;
+  /** Formbricks reports a survey it cannot save in a toast. */
+  @ayme.child
+  readonly errorMessage: Locator;
 
   constructor(page: Page) {
     super(page);
@@ -26,6 +29,7 @@ export class SurveyEditorPage extends AppPage {
       .locator("..")
       .locator(".editor-input");
     this.saveAndCloseButton = page.getByRole("button", { name: "Save & Close", exact: true });
+    this.errorMessage = page.locator("[data-rht-toaster]").getByRole("status");
   }
 
   @ayme.action({
@@ -38,12 +42,15 @@ export class SurveyEditorPage extends AppPage {
     return this;
   }
 
-  @ayme.action
-  async saveAndClose(): Promise<SurveySummaryPage> {
+  @ayme.action({
+    description:
+      "Publishes a draft survey, so it starts collecting responses; saves a published one. When the survey is invalid, the editor stays open with the error.",
+  })
+  async saveAndClose(): Promise<SurveySummaryPage | this> {
     await this.saveAndCloseButton.click();
     const summary = new SurveySummaryPage(this.page);
-    await summary.surveyTitleHeading.waitFor();
-    return summary;
+    await summary.surveyTitleHeading.or(this.errorMessage).first().waitFor();
+    return (await summary.surveyTitleHeading.isVisible()) ? summary : this;
   }
 
   private async fillQuestionText(text: string) {

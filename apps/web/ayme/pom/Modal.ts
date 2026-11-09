@@ -2,8 +2,8 @@ import { ayme } from "@ayme-dev/ayme";
 import type { Locator } from "@playwright/test";
 import { AppComponent } from "./AppComponent";
 
-/** The dialog that shares a survey; the summary opens it after a new survey is saved. */
-export class ShareSurveyDialog extends AppComponent {
+/** A dialog over the page, such as the one that shares a survey. */
+export class Modal extends AppComponent {
   @ayme.child
   readonly closeButton: Locator;
 
