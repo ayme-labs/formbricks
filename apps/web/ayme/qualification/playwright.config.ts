@@ -19,6 +19,8 @@ export default defineConfig({
   reporter: "list",
   use: {
     ...devices["Desktop Chrome"],
+    // The lab app has no WebMCP polyfill: Chrome's own document.modelContext needs its feature flag.
+    launchOptions: { args: ["--enable-features=WebMCP"] },
     baseURL: "http://localhost:3000",
     trace: "retain-on-failure",
   },
